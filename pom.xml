@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.yea</groupId>
+    <artifactId>yea</artifactId>
+    <packaging>pom</packaging>
+    <version>0.0.1</version>
+    
+    <properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<yea.version>0.0.1</yea.version>
+		
+		<junit.version>4.12</junit.version>
+		<servlet.version>3.0.1</servlet.version>
+		<spring.version>4.3.6.RELEASE</spring.version>
+		<spring.boot.version>1.5.1.RELEASE</spring.boot.version>
+		<logback.version>1.1.9</logback.version>
+		<logback.spring.version>0.1.4</logback.spring.version>
+		<slf4j.version>1.7.22</slf4j.version>
+		<mybatis.version>3.2.8</mybatis.version>
+        <mybatis.spring.version>1.2.2</mybatis.spring.version>
+        <druid.version>1.0.9</druid.version>
+        <postgresql.version>9.3-1102-jdbc41</postgresql.version>
+		<fst.version>2.48</fst.version>
+		<hessian.version>4.0.38</hessian.version>
+		<jackson.version>2.8.7</jackson.version>
+		<ehcache.version>2.8.8</ehcache.version>
+		<jedis.version>2.6.0</jedis.version>
+		<xmemcached.version>2.0.0</xmemcached.version>
+		<freemarker.version>2.3.23</freemarker.version>
+		<netty.version>4.0.25.Final</netty.version>
+		<curator.version>2.12.0</curator.version>
+		<shiro.version>1.3.2</shiro.version>
+		<jodd.version>3.6.2</jodd.version>
+	</properties>
+
+	<dependencyManagement>
+		<dependencies>
+			<!-- 单元测试用 -->
+	        <dependency>
+				<groupId>junit</groupId>
+				<artifactId>junit</artifactId>
+				<version>${junit.version}</version>
+			</dependency>
+			<dependency>
+			    <groupId>javax.servlet</groupId>
+			    <artifactId>javax.servlet-api</artifactId>
+			    <version>${servlet.version}</version>
+			</dependency>
+		
+			<!-- Spring framework -->
+		    <dependency>
+			    <groupId>org.springframework</groupId>
+		  	    <artifactId>spring-context-support</artifactId>
+			    <version>${spring.version}</version>
+		    </dependency>
+		    <dependency>
+				<groupId>org.springframework</groupId>
+				<artifactId>spring-tx</artifactId>
+				<version>${spring.version}</version>
+			</dependency>
+			<dependency>
+		        <groupId>org.springframework</groupId>
+		        <artifactId>spring-jdbc</artifactId>
+		        <version>${spring.version}</version>
+		    </dependency>
+			<dependency>
+				<groupId>org.springframework</groupId>
+				<artifactId>spring-test</artifactId>
+				<version>${spring.version}</version>
+			</dependency>
+			
+            <!-- SpringMVC framework -->
+			<dependency>
+				<groupId>org.springframework</groupId>
+				<artifactId>spring-web</artifactId>
+				<version>${spring.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.springframework</groupId>
+				<artifactId>spring-webmvc</artifactId>
+				<version>${spring.version}</version>
+			</dependency>
+
+            <!-- 日志:包含了slf4j-api和logback-core -->
+			<dependency>
+				<groupId>ch.qos.logback</groupId>
+				<artifactId>logback-classic</artifactId>
+				<version>${logback.version}</version>
+			</dependency>
+			<!-- 日志:把Spring源代码里使用的日志替换成slf4j -->
+			<dependency>
+				<groupId>org.slf4j</groupId>
+				<artifactId>jcl-over-slf4j</artifactId>
+				<version>${slf4j.version}</version>
+			</dependency>
+			<!-- 日志:提供对Spring的支持，LogbackConfigListener -->
+			<dependency>
+			    <groupId>org.logback-extensions</groupId>
+			    <artifactId>logback-ext-spring</artifactId>
+			    <version>${logback.spring.version}</version>
+			</dependency>
+			
+			<!-- 序列化支持 -->
+			<dependency>
+				<groupId>de.ruedigermoeller</groupId>
+				<artifactId>fst</artifactId>
+				<version>${fst.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.caucho</groupId>
+				<artifactId>hessian</artifactId>
+				<version>${hessian.version}</version>
+			</dependency>
+			
+			<!-- JSON支持 -->
+			<dependency>
+			    <groupId>com.fasterxml.jackson.core</groupId>
+			    <artifactId>jackson-databind</artifactId>
+			    <version>${jackson.version}</version>
+			</dependency>
+			
+			<!-- 缓存支持 -->
+			<!-- ehcache  -->
+	        <dependency>
+	            <groupId>net.sf.ehcache</groupId>
+	            <artifactId>ehcache</artifactId>
+	            <version>${ehcache.version}</version>
+	        </dependency>
+	        
+	        <!-- mybatis spring支持 -->
+		    <dependency>
+			    <groupId>org.mybatis</groupId>
+			    <artifactId>mybatis</artifactId>
+			    <version>${mybatis.version}</version>
+			</dependency>
+		    <dependency>
+		        <groupId>org.mybatis</groupId>
+		        <artifactId>mybatis-spring</artifactId>
+		        <version>${mybatis.spring.version}</version>
+		    </dependency>
+		    
+	        <!-- 数据库连接支持 -->
+			<dependency>
+			    <groupId>com.alibaba</groupId>
+			    <artifactId>druid</artifactId>
+			    <version>${druid.version}</version>
+			</dependency>
+			
+	        <!-- 数据库驱动支持 -->
+			<dependency>
+			    <groupId>org.postgresql</groupId>
+			    <artifactId>postgresql</artifactId>
+			    <version>${postgresql.version}</version>
+			</dependency>
+			
+			<!-- freemarker支持 -->
+			<dependency>
+			    <groupId>org.freemarker</groupId>
+			    <artifactId>freemarker</artifactId>
+			    <version>${freemarker.version}</version>
+			</dependency>
+			
+			<!-- Netty支持 -->
+			<dependency>
+				<groupId>io.netty</groupId>
+				<artifactId>netty-all</artifactId>
+				<version>${netty.version}</version>
+			</dependency>
+			
+			<!-- Zookeeper客户端支持 -->
+			<dependency>
+			    <groupId>org.apache.curator</groupId>
+			    <artifactId>curator-recipes</artifactId>
+			    <version>${curator.version}</version>
+			</dependency>
+			
+			<!-- Shiro支持 -->
+			<dependency>
+			    <groupId>org.apache.shiro</groupId>
+			    <artifactId>shiro-core</artifactId>
+			    <version>${shiro.version}</version>
+			</dependency>
+			<!-- Shiro与Spring的整合 -->
+			<dependency>
+			    <groupId>org.apache.shiro</groupId>
+			    <artifactId>shiro-spring</artifactId>
+			    <version>${shiro.version}</version>
+			</dependency>
+			<!-- Shiro与Web的整合 -->
+			<dependency>  
+			    <groupId>org.apache.shiro</groupId>
+			    <artifactId>shiro-web</artifactId>
+			    <version>${shiro.version}</version>
+			</dependency>
+			
+			<!-- Jodd支持，主要用于读取Prop配置文件 -->
+			<dependency>
+			    <groupId>org.jodd</groupId>
+			    <artifactId>jodd-props</artifactId>
+			    <version>${jodd.version}</version>
+			</dependency>
+			
+			<!-- 各模块内部引用 -->
+			<dependency>
+			    <groupId>com.yea</groupId>
+			    <artifactId>yea-core</artifactId>
+			    <version>${yea.version}</version>
+			</dependency>
+			<dependency>
+			    <groupId>com.yea</groupId>
+			    <artifactId>yea-netty</artifactId>
+			    <version>${yea.version}</version>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+	
+    <dependencies>
+	
+    </dependencies>
+  
+    <modules>
+        <module>yea-netty</module>
+        <module>yea-core</module>
+        <module>yea-orm</module>
+        <module>yea-shiro</module>
+        <module>yea-achieve</module>
+        <module>yea-dispatcher</module>
+        <module>yea-web</module>
+    </modules>
+</project>

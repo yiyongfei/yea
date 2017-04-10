@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context" xmlns:jdbc="http://www.springframework.org/schema/jdbc"  
+	xmlns:jee="http://www.springframework.org/schema/jee" xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xsi:schemaLocation="
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.0.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd
+		http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc-4.0.xsd
+		http://www.springframework.org/schema/jee http://www.springframework.org/schema/jee/spring-jee-4.0.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.0.xsd"
+	default-lazy-init="true">
+
+	<description>Spring公共配置 </description> 
+    <context:component-scan base-package="com.yea"></context:component-scan>
+    
+    <bean id="nettyMessageDecoder" class="com.yea.remote.netty.codec.NettyMessageDecoder"></bean>
+	<bean id="nettyMessageEncoder" class="com.yea.remote.netty.codec.NettyMessageEncoder"></bean>
+	
+	<bean id="heartBeatClientHandler" class="com.yea.remote.netty.client.handle.HeartBeatClientHandler">
+		<constructor-arg index="0" type="int" value="60"/>
+		<constructor-arg index="1" type="int" value="60"/>
+	</bean>
+	<bean id="heartBeatServerHandler" class="com.yea.remote.netty.server.handle.HeartBeatServerHandler">
+		<constructor-arg index="0" type="int" value="60"/>
+		<constructor-arg index="1" type="int" value="60"/>
+	</bean>
+	
+	<bean id="serviceServerHandler" class="com.yea.remote.netty.server.handle.ServiceServerHandler"></bean>
+	<bean id="exceptionHandler" class="com.yea.remote.netty.handle.ExceptionHandler"></bean>
+	
+	<bean id="dispatchClientHandler" class="com.yea.dispatcher.netty.handle.DispatchClientHandler"></bean>
+    
+    <bean id="dispatchClient" class="com.yea.remote.netty.client.NettyClient" init-method="connect" destroy-method="disconnect">
+		<property name="port" value="55051" />
+	    <property name="listHandler">
+            <list>
+                <map>
+	                <entry key="MessageDecoder">
+	                    <ref bean="nettyMessageDecoder"/>
+	                </entry>
+	            </map>
+	            <map>
+	                <entry key="MessageEncoder">
+	                    <ref bean="nettyMessageEncoder"/>
+	                </entry>
+	            </map>
+	            <map>
+	                <entry key="HeartBeatHandler">
+	                    <ref bean="heartBeatClientHandler"/>
+	                </entry>
+	            </map>
+	            <map>
+	                <entry key="DispatchClientHandler">
+	                    <ref bean="dispatchClientHandler"/>
+	                </entry>
+	            </map>
+            </list>
+        </property>
+        <property name="listSocketAddress">
+            <list>
+                <bean class="java.net.InetSocketAddress">
+                    <constructor-arg index="0" type="java.lang.String" value="192.168.151.219"/>
+					<constructor-arg index="1" type="int" value="58091"/>
+                </bean>
+            </list>
+        </property>
+	</bean>
+	<!-- 调度中心的配置 -->
+	<bean id="nettyDispatcher" class="com.yea.dispatcher.netty.NettyDispatcher" >
+		<property name="dispatchClient" ref="dispatchClient" />
+	</bean>
+	
+	<bean id="nettyServer" class="com.yea.remote.netty.server.NettyServer" destroy-method="shutdown">
+		<property name="registerName" value="LAUNCHER" />
+		<property name="dispatcher" ref="nettyDispatcher" />
+		<property name="port" value="38081" />
+	    <property name="listHandler">
+            <list>
+                <map>
+	                <entry key="MessageDecoder">
+	                    <ref bean="nettyMessageDecoder"/>
+	                </entry>
+	            </map>
+	            <map>
+	                <entry key="MessageEncoder">
+	                    <ref bean="nettyMessageEncoder"/>
+	                </entry>
+	            </map>
+	            <map>
+	                <entry key="HeartBeatHandler">
+	                    <ref bean="heartBeatServerHandler"/>
+	                </entry>
+	            </map>
+	            <map>
+	                <entry key="ServiceHandler">
+	                    <ref bean="serviceServerHandler"/>
+	                </entry>
+	            </map>
+	            <map>
+	                <entry key="ExceptionHandler">
+	                    <ref bean="exceptionHandler"/>
+	                </entry>
+	            </map>
+            </list>
+        </property>
+	</bean>
+	
+</beans>

@@ -1,0 +1,20 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+	    <groupId>com.yea</groupId>
+	    <artifactId>yea</artifactId>
+	    <version>0.0.1</version>
+    </parent>
+    <artifactId>yea-dispatcher</artifactId>
+    <dependencies>
+    	<dependency>
+		    <groupId>org.apache.curator</groupId>
+		    <artifactId>curator-recipes</artifactId>
+		</dependency>
+    	<!-- Netty，通过客户端与Netty服务端交互 -->
+        <dependency>
+	        <groupId>com.yea</groupId>
+	        <artifactId>yea-netty</artifactId>
+	    </dependency>
+    </dependencies>
+</project>
