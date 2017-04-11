@@ -15,15 +15,18 @@
  */
 package com.yea.core.cache.ehcache;
 
-import java.net.URL;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import net.sf.ehcache.Cache;
 import net.sf.ehcache.CacheManager;
 import net.sf.ehcache.config.CacheConfiguration;
+import net.sf.ehcache.config.Configuration;
+import net.sf.ehcache.config.DiskStoreConfiguration;
+import net.sf.ehcache.config.FactoryConfiguration;
 import net.sf.ehcache.config.PersistenceConfiguration;
 import net.sf.ehcache.config.PersistenceConfiguration.Strategy;
+import net.sf.ehcache.distribution.RMICacheManagerPeerListenerFactory;
 import net.sf.ehcache.store.MemoryStoreEvictionPolicy;
 
 /**
@@ -39,12 +42,14 @@ public class EhcacheInstance {
 	private static Map<String, Cache> mapCache = null;
 	static {
 		mapCache = new ConcurrentHashMap<String, Cache>();
-		URL url = EhcacheInstance.class.getResource("/core-ehcache.xml");
-		if(url != null){
-			manager = CacheManager.create(url);
-		} else {
-			manager = CacheManager.create();
-		}
+		Configuration configuration = new Configuration()//
+				.diskStore(new DiskStoreConfiguration().path("java.io.tmpdir"))// 临时文件目录
+				// 配宿主主机配置监听程序
+				.cacheManagerPeerListenerFactory(new FactoryConfiguration<FactoryConfiguration<?>>()//
+						.className(RMICacheManagerPeerListenerFactory.class.getName())//
+						.properties("port=50505,socketTimeoutMillis=2000")//
+		);
+		manager = CacheManager.create(configuration);
 		
 		/**
 		缓存配置
@@ -61,6 +66,7 @@ public class EhcacheInstance {
 		       memoryStoreEvictionPolicy：当达到maxElementsInMemory限制时，Ehcache将会根据指定的策略去清理内存。默认策略是LRU（最近最少使用）。你可以设置为FIFO（先进先出）或是LFU（较少使用）。 
 		       clearOnFlush：内存数量最大时是否清除。 
 		*/
+		/*登录重试次数缓存*/
 		if (!manager.cacheExists(LOGIN_RETRY_CACHE)) {
 			Cache loginRetryCache = new Cache(
 					 new CacheConfiguration(LOGIN_RETRY_CACHE, 20000)
@@ -73,7 +79,7 @@ public class EhcacheInstance {
 			manager.addCache(loginRetryCache);
 			mapCache.put(LOGIN_RETRY_CACHE, loginRetryCache);
 		}
-		
+		/*Netty数据缓存*/
 		if (!manager.cacheExists(NETTY_CACHE)) {
 			Cache nettyCache = new Cache(
 					 new CacheConfiguration(NETTY_CACHE, 20000)
