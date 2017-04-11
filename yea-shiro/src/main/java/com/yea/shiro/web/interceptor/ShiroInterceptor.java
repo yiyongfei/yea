@@ -2,21 +2,22 @@ package com.yea.shiro.web.interceptor;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Enumeration;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.subject.Subject;
 import org.apache.shiro.web.util.WebUtils;
-import org.springframework.ui.ModelMap;
-import org.springframework.web.context.request.ServletWebRequest;
-import org.springframework.web.context.request.WebRequest;
-import org.springframework.web.context.request.WebRequestInterceptor;
+import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.ModelAndView;
 
 import com.yea.core.remote.AbstractEndpoint;
 import com.yea.core.remote.promise.Promise;
@@ -27,17 +28,18 @@ import com.yea.shiro.model.SystemMenu;
 import com.yea.shiro.model.UserPrincipal;
 import com.yea.shiro.web.mgt.WebSecurityManager;
 
-public class ShiroInterceptor implements WebRequestInterceptor {
+public class ShiroInterceptor implements HandlerInterceptor {
 
 	@Override
-	public void preHandle(WebRequest request) throws Exception {
-		ServletWebRequest servletRequest = (ServletWebRequest) request;
-		Iterator<String> it = servletRequest.getParameterNames();
-		while(it.hasNext()) {
-			if(it.next().equals("menu")) {
+	public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
+			throws Exception {
+		// TODO Auto-generated method stub
+		Enumeration<String> names = request.getParameterNames();
+		while(names.hasMoreElements()) {
+			if(names.nextElement().equals("menu")) {
 				Subject subject = SecurityUtils.getSubject();
 				if(subject.isAuthenticated() || subject.isRemembered()) {
-					String requestURI = WebUtils.getPathWithinApplication(servletRequest.getRequest());
+					String requestURI = WebUtils.getPathWithinApplication(request);
 					SystemMenu menu = (SystemMenu) subject.getSession().getAttribute(ShiroConstants.SYSTEM_MENU);
 					if(menu != null) {
 						menu.setCurrMenu(requestURI);
@@ -45,23 +47,29 @@ public class ShiroInterceptor implements WebRequestInterceptor {
 				}
 			}
 		}
+		return true;
 	}
 
 	@Override
-	public void postHandle(WebRequest request, ModelMap model) throws Exception {
+	public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler,
+			ModelAndView modelAndView) throws Exception {
+		// TODO Auto-generated method stub
 		Subject subject = SecurityUtils.getSubject();
-		if((subject.isAuthenticated() || subject.isRemembered()) && model != null) {
-			model.put("loginuser", subject.getPrincipal());
+		if((subject.isAuthenticated() || subject.isRemembered()) && modelAndView != null && modelAndView.getModel() != null) {
+			modelAndView.getModel().put("loginuser", subject.getPrincipal());
 			if (subject.getSession().getAttribute(ShiroConstants.SYSTEM_MENU) == null) {
 				_InnerMenu menu = new _InnerMenu();
 				menu.menu(((WebSecurityManager)SecurityUtils.getSecurityManager()).getEndpoint(), subject);
 			}
-			model.put("systemMenu", subject.getSession().getAttribute(ShiroConstants.SYSTEM_MENU));
+			modelAndView.getModel().put("systemMenu", subject.getSession().getAttribute(ShiroConstants.SYSTEM_MENU));
 		}
 	}
 
 	@Override
-	public void afterCompletion(WebRequest request, Exception ex) throws Exception {	
+	public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex)
+			throws Exception {
+		// TODO Auto-generated method stub
+		
 	}
 
 	@SuppressWarnings("hiding")
@@ -128,7 +136,6 @@ public class ShiroInterceptor implements WebRequestInterceptor {
 				parentMenu(endpoint, parentMenu);
 			}
 			
-//			user.getUserMenu().setMenus(topMenu);
 			SystemMenu sysMenu = new SystemMenu();
 			sysMenu.setMenus(topMenu);
 			subject.getSession().setAttribute(ShiroConstants.SYSTEM_MENU, sysMenu);
@@ -182,4 +189,5 @@ public class ShiroInterceptor implements WebRequestInterceptor {
 			
 		}
 	}
+
 }

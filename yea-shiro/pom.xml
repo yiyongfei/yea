@@ -15,7 +15,7 @@
 		<!-- Spring Web支持 -->
 		<dependency>
 		    <groupId>org.springframework</groupId>
-		    <artifactId>spring-web</artifactId>
+		    <artifactId>spring-webmvc</artifactId>
 		</dependency>
         <!-- Shiro支持 -->
 		<dependency>
