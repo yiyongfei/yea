@@ -27,7 +27,7 @@ public class GeneratorConfig extends BaseModel{
 	private String moduleName;//模块名
 	private String basePackagePath;//根包名
 	private boolean daoGenerateable = true;//是否生成DAO
-	private String commonDaoPackagePath = "com.jea.achieve.common.dao";//公共DAO的包名
+	private String commonDaoPackagePath = "com.yea.achieve.common.dao";//公共DAO的包名
 	private String commonDaoName = "CommonDao";//公共DAO的类名
 	private String catalog;
 	private String schema;
