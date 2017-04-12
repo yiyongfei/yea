@@ -8,45 +8,7 @@
     <artifactId>yea-achieve</artifactId>
   
     <dependencies>
-        <!-- 单元测试用 -->
-        <dependency>
-			<groupId>junit</groupId>
-			<artifactId>junit</artifactId>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework</groupId>
-			<artifactId>spring-test</artifactId>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-		    <groupId>com.alibaba</groupId>
-		    <artifactId>druid</artifactId>
-		    <scope>test</scope>
-		</dependency>
-        <dependency>
-		    <groupId>org.postgresql</groupId>
-		    <artifactId>postgresql</artifactId>
-		    <scope>test</scope>
-		</dependency>
-		<dependency>
-	        <groupId>org.springframework</groupId>
-	        <artifactId>spring-jdbc</artifactId>
-	        <scope>test</scope>
-	    </dependency>
-	    <dependency>
-		    <groupId>org.mybatis</groupId>
-		    <artifactId>mybatis</artifactId>
-		    <scope>test</scope>
-		</dependency>
-	    <dependency>
-	        <groupId>org.mybatis</groupId>
-	        <artifactId>mybatis-spring</artifactId>
-	        <scope>test</scope>
-	    </dependency>
-		<!-- 单元测试结束 -->
-		
-		<!-- Freemarker支持 -->
+        <!-- Freemarker支持 -->
 		<dependency>
 		    <groupId>org.freemarker</groupId>
 		    <artifactId>freemarker</artifactId>

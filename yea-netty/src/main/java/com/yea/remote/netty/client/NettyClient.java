@@ -311,6 +311,9 @@ public class NettyClient extends AbstractEndpoint {
 
 		private void _connect(SocketAddress socketAddress) throws Exception {
 			super.getConnectLock().lock();
+			if (super.isConnected()) {
+				return;
+			}
 			try {
 				group = new NioEventLoopGroup();
 				// 配置客户端NIO线程组

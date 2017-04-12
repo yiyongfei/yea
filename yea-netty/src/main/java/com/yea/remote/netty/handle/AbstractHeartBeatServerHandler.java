@@ -93,21 +93,18 @@ public abstract class AbstractHeartBeatServerHandler extends IdleStateHandler im
             ctx.channel().close();
             getLogger().info("读超时，关闭当前Channel！");
             return;
-//            throw new RemoteException(PafaErrorMessage.ERR_FOUNDATION, NettyConstants.ExceptionType.TIMEOUT.value() ,null, ReadTimeoutException.INSTANCE);
         }
         boolean isWriteTimeout = checkTimeout(Type.WRITER);
         if(isWriteTimeout){
         	ctx.channel().close();
         	getLogger().info("写超时，关闭当前Channel！");
         	return;
-//            throw new RemoteException(PafaErrorMessage.ERR_FOUNDATION, NettyConstants.ExceptionType.TIMEOUT.value() ,null, WriteTimeoutException.INSTANCE);
         }
         
         ctx.writeAndFlush(heatBeat);
     }
     
     protected boolean checkTimeout(Type type) {
-//    	return true;
         Long endTime = (Long) (type.equals(Type.READER) ? mapHeartBeat.get(HEARTBEAT_READ_TIMEOUT) : mapHeartBeat.get(HEARTBEAT_WRITE_TIMEOUT));
         if(endTime != null && (new Date().getTime() - endTime) > NettyConstants.HEARTBEAT.TIMEOUT.value()){
             long retryTime = (Long) (type.equals(Type.READER) ? mapHeartBeat.get(HEARTBEAT_READ_RETRY) : mapHeartBeat.get(HEARTBEAT_WRITE_RETRY));;

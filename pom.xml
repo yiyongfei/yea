@@ -13,20 +13,15 @@
 		<junit.version>4.12</junit.version>
 		<servlet.version>3.0.1</servlet.version>
 		<spring.version>4.3.6.RELEASE</spring.version>
-		<spring.boot.version>1.5.1.RELEASE</spring.boot.version>
 		<logback.version>1.1.9</logback.version>
 		<logback.spring.version>0.1.4</logback.spring.version>
 		<slf4j.version>1.7.22</slf4j.version>
 		<mybatis.version>3.2.8</mybatis.version>
         <mybatis.spring.version>1.2.2</mybatis.spring.version>
-        <druid.version>1.0.9</druid.version>
-        <postgresql.version>9.3-1102-jdbc41</postgresql.version>
-		<fst.version>2.48</fst.version>
+        <fst.version>2.48</fst.version>
 		<hessian.version>4.0.38</hessian.version>
 		<jackson.version>2.8.7</jackson.version>
 		<ehcache.version>2.8.8</ehcache.version>
-		<jedis.version>2.6.0</jedis.version>
-		<xmemcached.version>2.0.0</xmemcached.version>
 		<freemarker.version>2.3.23</freemarker.version>
 		<netty.version>4.0.25.Final</netty.version>
 		<curator.version>2.12.0</curator.version>
@@ -42,6 +37,8 @@
 				<artifactId>junit</artifactId>
 				<version>${junit.version}</version>
 			</dependency>
+			
+			<!-- Shiro用 -->
 			<dependency>
 			    <groupId>javax.servlet</groupId>
 			    <artifactId>javax.servlet-api</artifactId>
@@ -140,20 +137,6 @@
 		        <version>${mybatis.spring.version}</version>
 		    </dependency>
 		    
-	        <!-- 数据库连接支持 -->
-			<dependency>
-			    <groupId>com.alibaba</groupId>
-			    <artifactId>druid</artifactId>
-			    <version>${druid.version}</version>
-			</dependency>
-			
-	        <!-- 数据库驱动支持 -->
-			<dependency>
-			    <groupId>org.postgresql</groupId>
-			    <artifactId>postgresql</artifactId>
-			    <version>${postgresql.version}</version>
-			</dependency>
-			
 			<!-- freemarker支持 -->
 			<dependency>
 			    <groupId>org.freemarker</groupId>
