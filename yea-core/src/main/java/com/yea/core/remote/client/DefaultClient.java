@@ -15,7 +15,9 @@
  */
 package com.yea.core.remote.client;
 
-import com.yea.core.base.facade.IFacade;
+import java.util.concurrent.ForkJoinPool;
+
+import com.yea.core.base.facade.AbstractFacade;
 import com.yea.core.remote.AbstractEndpoint;
 import com.yea.core.remote.client.promise.DefaultPromise;
 import com.yea.core.remote.constants.RemoteConstants;
@@ -29,15 +31,18 @@ import com.yea.core.remote.struct.Header;
  * 
  */
 public class DefaultClient extends AbstractEndpoint {
+	private ForkJoinPool pool = new ForkJoinPool();
     
     @SuppressWarnings({ "unchecked", "rawtypes" })
 	public Promise send(CallFacadeDef facade, Object... messages) throws Exception {
     	DefaultPromise promise = new DefaultPromise();
     	byte[] sessionID = new byte[]{0};
-    	IFacade facadeBean = (IFacade) this.getApplicationContext().getBean(facade.getCallFacadeName());
-    	
-    	try{
-    		Object obj = facadeBean.facade(messages);
+    	AbstractFacade<?> srcfacade = (AbstractFacade<?>) this.getApplicationContext().getBean(facade.getCallFacadeName());
+		AbstractFacade<?> cloneFacade = (AbstractFacade<?>) srcfacade.clone();
+		cloneFacade.setApplicationContext(this.getApplicationContext());
+		cloneFacade.setMessages(messages);
+		try{
+    		Object obj = pool.invoke(cloneFacade);
     		Header header = new Header();
             header.setType(RemoteConstants.MessageType.SERVICE_RESP.value());
             header.setSessionID(sessionID);

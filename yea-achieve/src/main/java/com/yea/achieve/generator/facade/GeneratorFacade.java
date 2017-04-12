@@ -17,6 +17,7 @@ package com.yea.achieve.generator.facade;
 
 
 import java.util.Map;
+import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -33,17 +34,18 @@ import com.yea.core.base.facade.AbstractFacade;
  * 
  */
 @Component("generatorFacade")
-public class GeneratorFacade extends AbstractFacade {
+public class GeneratorFacade extends AbstractFacade<Set<String>> {
+	private static final long serialVersionUID = 1L;
 	
 	@Autowired
 	private GeneratorService generatorService;
     /** 
      * @throws Exception 
-     * @see com.jbs.remote.facade.AbstractFacade#perform(java.lang.Object[])
+     * @see com.AbstractFacade.remote.facade.AbstractFacade#perform(java.lang.Object[])
      */
     @SuppressWarnings("unchecked")
 	@Override
-    protected Object perform(Object... messages) throws Exception {
+    protected Set<String> perform(Object[] messages) throws Exception {
     	Map<String, String> params = (Map<String, String>) messages[0];
     	GeneratorConfig config = new GeneratorConfig();
     	config.setModuleName(params.get("moduleName"));

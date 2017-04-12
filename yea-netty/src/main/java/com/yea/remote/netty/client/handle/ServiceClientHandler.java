@@ -16,15 +16,12 @@
 package com.yea.remote.netty.client.handle;
 
 import java.util.Date;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.ForkJoinPool;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationContext;
 
-import com.yea.core.base.facade.IFacade;
+import com.yea.core.base.facade.AbstractFacade;
 import com.yea.core.remote.constants.RemoteConstants;
 import com.yea.core.remote.struct.Message;
 import com.yea.remote.netty.constants.NettyConstants;
@@ -44,7 +41,7 @@ import io.netty.channel.ChannelHandlerContext;
  */
 public class ServiceClientHandler extends AbstractServiceHandler implements NettyChannelHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(ServiceClientHandler.class);
-    private ExecutorService executor = Executors.newFixedThreadPool(NettyConstants.ThreadPool.SERVICE_CLIENT_HANDLER.value());
+    private ForkJoinPool pool = new ForkJoinPool();
     
     @Override
 	protected void execute(ChannelHandlerContext ctx, Message message) throws Exception {
@@ -52,7 +49,15 @@ public class ServiceClientHandler extends AbstractServiceHandler implements Nett
 		if (message.getHeader().getType() == RemoteConstants.MessageType.SERVICE_RESP.value()) {
             LOGGER.info(ctx.channel().localAddress() + "从" + ctx.channel().remoteAddress() + "接收到响应" + ",共用时：" + (new Date().getTime() - ((Date)message.getHeader().getAttachment().get(NettyConstants.HEADER_DATE)).getTime()));
             if(message.getHeader().getAttachment().get(NettyConstants.CALL_FACADE) != null) {
-            	executor.submit(new FacadeRunnable(this.getApplicationContext(), message));
+				AbstractFacade<?> facade = (AbstractFacade<?>) this.getApplicationContext().getBean((String) message.getHeader().getAttachment().get(NettyConstants.CALL_FACADE));
+				AbstractFacade<?> cloneFacade = (AbstractFacade<?>) facade.clone();
+				cloneFacade.setApplicationContext(this.getApplicationContext());
+				if (RemoteConstants.MessageResult.SUCCESS.value() == message.getHeader().getResult()) {
+					cloneFacade.setMessages((Object[]) message.getBody());
+				} else {
+					cloneFacade.setThrowable((Exception) message.getBody());
+				}
+				pool.execute(cloneFacade);
             }
             
             notifyObservers(message.getHeader().getSessionID(), message.getHeader(), message.getBody());
@@ -67,33 +72,4 @@ public class ServiceClientHandler extends AbstractServiceHandler implements Nett
         return obj;
     }
 
-}
-
-class FacadeRunnable implements Callable<Boolean> {
-    private ApplicationContext springCTX;
-    private Message message;
-    
-    public FacadeRunnable(ApplicationContext springCTX, Message message){
-        this.springCTX = springCTX;
-        this.message = message;
-    }
-    /** 
-     * @see java.lang.Runnable#run()
-     */
-    public Boolean call() {
-    	
-    	String facadeName = (String) message.getHeader().getAttachment().get(NettyConstants.CALL_FACADE);
-    	IFacade facade = (IFacade) springCTX.getBean(facadeName);
-    	
-    	if(RemoteConstants.MessageResult.SUCCESS.value() == message.getHeader().getResult()) {
-    		Object[] messages = new Object[]{ message.getBody() };
-    		facade.facade(messages);
-    	} else {
-    		Exception ex = (Exception) message.getBody();
-    		facade.facade(ex);
-    	}
-        
-        return true;
-    }
-    
 }

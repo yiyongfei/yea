@@ -29,15 +29,17 @@ import com.yea.core.base.facade.AbstractFacade;
  * 
  */
 @Component("shiroFacade")
-public class ShiroFacade extends AbstractFacade {
+public class ShiroFacade extends AbstractFacade<Object> {
+	private static final long serialVersionUID = 1L;
+	
 	@Autowired
 	private ShiroService shiroService;
     /** 
      * @throws Exception 
-     * @see com.jbs.remote.facade.AbstractFacade#perform(java.lang.Object[])
+     * @see com.AbstractFacade.remote.facade.AbstractFacade#perform(java.lang.Object[])
      */
     @Override
-    protected Object perform(Object... messages) throws Exception {
+    protected Object perform(Object[] messages) throws Exception {
     	return shiroService.executeSQL((String)messages[0], (Object[])messages[1]);
     }
     
