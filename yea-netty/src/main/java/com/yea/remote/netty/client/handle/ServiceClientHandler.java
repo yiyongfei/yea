@@ -17,11 +17,14 @@ package com.yea.remote.netty.client.handle;
 
 import java.util.Date;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.RecursiveAction;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationContext;
 
 import com.yea.core.base.facade.AbstractFacade;
+import com.yea.core.exception.YeaException;
 import com.yea.core.remote.constants.RemoteConstants;
 import com.yea.core.remote.struct.Message;
 import com.yea.remote.netty.constants.NettyConstants;
@@ -49,15 +52,7 @@ public class ServiceClientHandler extends AbstractServiceHandler implements Nett
 		if (message.getHeader().getType() == RemoteConstants.MessageType.SERVICE_RESP.value()) {
             LOGGER.info(ctx.channel().localAddress() + "从" + ctx.channel().remoteAddress() + "接收到响应" + ",共用时：" + (new Date().getTime() - ((Date)message.getHeader().getAttachment().get(NettyConstants.HEADER_DATE)).getTime()));
             if(message.getHeader().getAttachment().get(NettyConstants.CALL_FACADE) != null) {
-				AbstractFacade<?> facade = (AbstractFacade<?>) this.getApplicationContext().getBean((String) message.getHeader().getAttachment().get(NettyConstants.CALL_FACADE));
-				AbstractFacade<?> cloneFacade = (AbstractFacade<?>) facade.clone();
-				cloneFacade.setApplicationContext(this.getApplicationContext());
-				if (RemoteConstants.MessageResult.SUCCESS.value() == message.getHeader().getResult()) {
-					cloneFacade.setMessages((Object[]) message.getBody());
-				} else {
-					cloneFacade.setThrowable((Exception) message.getBody());
-				}
-				pool.execute(cloneFacade);
+				pool.execute(new InnerTask(this.getApplicationContext(), message));
             }
             
             notifyObservers(message.getHeader().getSessionID(), message.getHeader(), message.getBody());
@@ -72,4 +67,32 @@ public class ServiceClientHandler extends AbstractServiceHandler implements Nett
         return obj;
     }
 
+    class InnerTask extends RecursiveAction {
+    	private static final long serialVersionUID = 1L;
+    	private ApplicationContext springContext;
+    	private Message message;
+
+    	public InnerTask(ApplicationContext springContext, Message message) {
+    		this.springContext = springContext;
+    		this.message = message;
+    	}
+
+		@Override
+		protected void compute() {
+			// TODO Auto-generated method stub
+			AbstractFacade<?> facade = (AbstractFacade<?>) springContext.getBean((String) message.getHeader().getAttachment().get(NettyConstants.CALL_FACADE));
+			try {
+				AbstractFacade<?> cloneFacade = facade.clone();
+				cloneFacade.setApplicationContext(springContext);
+				if (RemoteConstants.MessageResult.SUCCESS.value() == message.getHeader().getResult()) {
+					cloneFacade.setMessages((Object[]) message.getBody());
+				} else {
+					cloneFacade.setThrowable((Exception) message.getBody());
+				}
+				cloneFacade.fork();
+			} catch (CloneNotSupportedException ex) {
+				throw new YeaException(ex);
+			}
+		}
+    }
 }

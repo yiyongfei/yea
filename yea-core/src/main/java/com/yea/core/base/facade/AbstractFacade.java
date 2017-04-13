@@ -30,7 +30,7 @@ import com.yea.core.base.facade.exception.FacadeException;
  * @param <T>
  * 
  */
-public abstract class AbstractFacade<T> extends RecursiveTask<T>implements Cloneable {
+public abstract class AbstractFacade<T> extends RecursiveTask<T> implements Cloneable {
 	protected static final long serialVersionUID = 1L;
 	protected PlatformTransactionManager txManager;
 	protected ApplicationContext context;
@@ -70,8 +70,8 @@ public abstract class AbstractFacade<T> extends RecursiveTask<T>implements Clone
 	protected abstract T perform(Object[] messages) throws Throwable;
 
 	@Override
-	public RecursiveTask<?> clone() throws CloneNotSupportedException {
-		RecursiveTask<?> obj = (RecursiveTask<?>) super.clone();
+	public AbstractFacade<?> clone() throws CloneNotSupportedException {
+		AbstractFacade<?> obj = (AbstractFacade<?>) super.clone();
 		return obj;
 	}
 
