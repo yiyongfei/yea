@@ -1,8 +1,10 @@
 
 *.DS_Store
 
-*/.classpath
+**/.classpath
 
-*/.project
+**/.project
 
-*/.settings/*
+**/.settings/*
+
+*/.gitignore
