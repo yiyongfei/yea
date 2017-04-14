@@ -52,7 +52,7 @@ public class RetryLimitHashedCredentialsMatcher extends HashedCredentialsMatcher
 		} else {
 			Element element = shiroCache.get(username);
 			if(element == null) {
-				element = new Element(username , new AtomicInteger(0));
+				element = new Element(username , new AtomicInteger(1));
 				shiroCache.put(element);
 			}
 			AtomicInteger retryCount = (AtomicInteger) element.getObjectValue();

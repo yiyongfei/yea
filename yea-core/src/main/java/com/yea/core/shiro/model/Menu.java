@@ -1,4 +1,4 @@
-package com.yea.shiro.model;
+package com.yea.core.shiro.model;
 
 import java.util.Set;
 

@@ -1,4 +1,4 @@
-package com.yea.shiro.model;
+package com.yea.core.shiro.model;
 
 import com.yea.core.base.model.BaseModel;
 

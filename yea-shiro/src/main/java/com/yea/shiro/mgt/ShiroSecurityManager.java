@@ -24,8 +24,8 @@ import org.apache.shiro.authz.permission.WildcardPermissionResolver;
 import org.apache.shiro.mgt.DefaultSecurityManager;
 
 import com.yea.core.remote.AbstractEndpoint;
+import com.yea.core.shiro.password.EncrytPassword;
 import com.yea.shiro.credential.RetryLimitHashedCredentialsMatcher;
-import com.yea.shiro.password.EncrytPassword;
 import com.yea.shiro.realm.netty.NettyRealm;
 
 /**

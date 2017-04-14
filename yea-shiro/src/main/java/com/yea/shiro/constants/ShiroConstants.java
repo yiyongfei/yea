@@ -111,6 +111,19 @@ public class ShiroConstants {
         }
     }
     
+    public enum LockTag {
+    	LOCK("09"),
+    	UN_LOCK("01");
+        
+        private String value;
+        private LockTag(String value) {
+            this.value = value;
+        }
+        public String value() {
+            return this.value;
+        }
+    }
+    
     public final static int LOGIN_RETRY_LIMIT = 5;
     
     public final static String SYSTEM_MENU = "SYSTEM_MENU";
