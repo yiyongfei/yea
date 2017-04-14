@@ -13,23 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.yea.core.base.facade;
+package com.yea.core.base.act;
 
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import com.yea.core.base.facade.exception.FacadeException;
+import com.yea.core.base.act.exception.ActException;
 
 /**
- * Facade类，事务控制，对于增删改的操作，Facade将继承该类
- * 在Facade层，子类只要继承该类，该子类的事务就交由Spring管理
+ * Act类，事务控制，对于增删改的操作，Act将继承该类
+ * 在Act层，子类只要继承该类，该子类的事务就交由Spring管理
  * 
  * @author yiyongfei
  *
  */
-public abstract class AbstractTransactionFacade<T> extends AbstractFacade<T> {
+public abstract class AbstractTransactionAct<T> extends AbstractAct<T> {
 
 	protected static final long serialVersionUID = 1L;
 
@@ -46,7 +46,7 @@ public abstract class AbstractTransactionFacade<T> extends AbstractFacade<T> {
 				public T doInTransaction(TransactionStatus status) {
 					try {
 						return _compute();
-					} catch (FacadeException e) {
+					} catch (ActException e) {
 						status.setRollbackOnly();
 						throw e;
 					}

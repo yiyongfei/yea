@@ -15,20 +15,20 @@
  */
 package com.yea.core.remote.struct;
 
-public class CallFacadeDef {
-	private String callFacadeName;//服务端对应的Facade定义BeanName，必须
-	private String callbackFacadeName;//本地对应回调用的FacadeBeanName，非必须，本地需要异步回调时设置
+public class CallAct {
+	private String actName;//服务端对应的Act定义BeanName，必须
+	private String callbackName;//本地对应回调用的ActBeanName，非必须，本地需要异步回调时设置
 	
-	public String getCallFacadeName() {
-		return callFacadeName;
+	public String getActName() {
+		return actName;
 	}
-	public void setCallFacadeName(String callFacadeName) {
-		this.callFacadeName = callFacadeName;
+	public void setActName(String actName) {
+		this.actName = actName;
 	}
-	public String getCallbackFacadeName() {
-		return callbackFacadeName;
+	public String getCallbackName() {
+		return callbackName;
 	}
-	public void setCallbackFacadeName(String callbackFacadeName) {
-		this.callbackFacadeName = callbackFacadeName;
+	public void setCallbackName(String callbackName) {
+		this.callbackName = callbackName;
 	}
 }

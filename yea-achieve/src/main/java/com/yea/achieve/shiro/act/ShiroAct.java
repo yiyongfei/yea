@@ -13,14 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.yea.achieve.shiro.facade;
+package com.yea.achieve.shiro.act;
 
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.yea.achieve.shiro.service.ShiroService;
-import com.yea.core.base.facade.AbstractFacade;
+import com.yea.core.base.act.AbstractAct;
 
 
 /**
@@ -28,16 +28,13 @@ import com.yea.core.base.facade.AbstractFacade;
  * @author yiyongfei
  * 
  */
-@Component("shiroFacade")
-public class ShiroFacade extends AbstractFacade<Object> {
+@Component("shiroAct")
+public class ShiroAct extends AbstractAct<Object> {
 	private static final long serialVersionUID = 1L;
 	
 	@Autowired
 	private ShiroService shiroService;
-    /** 
-     * @throws Exception 
-     * @see com.AbstractFacade.remote.facade.AbstractFacade#perform(java.lang.Object[])
-     */
+    
     @Override
     protected Object perform(Object[] messages) throws Exception {
     	return shiroService.executeSQL((String)messages[0], (Object[])messages[1]);

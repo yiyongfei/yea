@@ -21,7 +21,7 @@ import org.springframework.context.ApplicationContextAware;
 
 import com.yea.core.dispatcher.DispatcherEndpoint;
 import com.yea.core.remote.promise.Promise;
-import com.yea.core.remote.struct.CallFacadeDef;
+import com.yea.core.remote.struct.CallAct;
 
 /**
  * 
@@ -71,5 +71,5 @@ public abstract class AbstractEndpoint implements ApplicationContextAware {
     }
     
     public abstract int remoteConnects();
-    public abstract <T> Promise<T> send(CallFacadeDef facade, Object... messages) throws Throwable;
+    public abstract <T> Promise<T> send(CallAct act, Object... messages) throws Throwable;
 }

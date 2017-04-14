@@ -20,7 +20,7 @@ import org.apache.shiro.authc.UnknownAccountException;
 
 import com.yea.core.remote.AbstractEndpoint;
 import com.yea.core.remote.promise.Promise;
-import com.yea.core.remote.struct.CallFacadeDef;
+import com.yea.core.remote.struct.CallAct;
 import com.yea.shiro.constants.ShiroConstants;
 import com.yea.shiro.realm.AbstractRealm;
 
@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 通过Netty来获取用户数据，依赖com.yea.achieve.shiro.facade.ShiroFacade
+ * 通过Netty来获取用户数据，依赖com.yea.achieve.shiro.act.ShiroAct
  * @author yiyongfei
  *
  */
@@ -45,11 +45,11 @@ public class NettyRealm extends AbstractRealm {
     
 	@Override
 	protected Map<String, Object> getUser(String username) throws AuthenticationException {
-		CallFacadeDef facade = new CallFacadeDef();
-		facade.setCallFacadeName("shiroFacade");
+		CallAct act = new CallAct();
+		act.setActName("shiroAct");
 		List<Map<String, Object>> listUser = null;
 		try {
-			Promise<List<Map<String, Object>>> future = nettyClient.send(facade, ShiroConstants.ShiroSQL.AUTHENTICATION_QUERY.getSql(), new String[]{username});
+			Promise<List<Map<String, Object>>> future = nettyClient.send(act, ShiroConstants.ShiroSQL.AUTHENTICATION_QUERY.getSql(), new String[]{username});
 			listUser = future.awaitObject(10000);
 		} catch (Throwable e) {
             final String message = "认证用户[" + username + "]时发生了远程获取认证信息失败！";
@@ -66,25 +66,25 @@ public class NettyRealm extends AbstractRealm {
 	
 	@Override
 	protected List<Map<String, Object>> getRoles(String username) throws Throwable {
-		CallFacadeDef facade = new CallFacadeDef();
-		facade.setCallFacadeName("shiroFacade");
+		CallAct act = new CallAct();
+		act.setActName("shiroAct");
     	try {
-    		Promise<List<Map<String, Object>>> futureRole = nettyClient.send(facade, ShiroConstants.ShiroSQL.USER_ROLES_QUERY.getSql(), new String[]{username});
+    		Promise<List<Map<String, Object>>> futureRole = nettyClient.send(act, ShiroConstants.ShiroSQL.USER_ROLES_QUERY.getSql(), new String[]{username});
     		return futureRole.awaitObject(10000);
     	} finally {
-    		facade = null;
+    		act = null;
         }
 	}
 	
 	@Override
 	protected List<Map<String, String>> getPermissions(Object roleId) throws Throwable {
-		CallFacadeDef facade = new CallFacadeDef();
-		facade.setCallFacadeName("shiroFacade");
+		CallAct act = new CallAct();
+		act.setActName("shiroAct");
 		try {
-			Promise<List<Map<String, String>>> futurePermission = nettyClient.send(facade, ShiroConstants.ShiroSQL.USER_PERMISSION_QUERY.getSql(), new Object[]{roleId});
+			Promise<List<Map<String, String>>> futurePermission = nettyClient.send(act, ShiroConstants.ShiroSQL.USER_PERMISSION_QUERY.getSql(), new Object[]{roleId});
 	    	return futurePermission.awaitObject(10000);
 	    } finally {
-    		facade = null;
+    		act = null;
         }
 	}
 }

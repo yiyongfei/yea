@@ -56,7 +56,7 @@ public class ExceptionHandler extends ChannelInboundHandlerObservable implements
         }
         if (message.getHeader().getType() == RemoteConstants.MessageType.SUSPEND_REQ.value()) {
         	LOGGER.info(ctx.channel().localAddress() + "从" + ctx.channel().remoteAddress() + "接收请求后处理时出现异常！");
-        	ctx.writeAndFlush(buildResp(message.getHeader().getResult(), message.getHeader().getSessionID(), message.getBody(), (String)message.getHeader().getAttachment().get(NettyConstants.CALLBACK_FACADE)));
+        	ctx.writeAndFlush(buildResp(message.getHeader().getResult(), message.getHeader().getSessionID(), message.getBody(), (String)message.getHeader().getAttachment().get(NettyConstants.CALLBACK_ACT)));
         } else if (message.getHeader().getType() == RemoteConstants.MessageType.SUSPEND_RESP.value()) {
             LOGGER.info(ctx.channel().localAddress() + "从" + ctx.channel().remoteAddress() + "接收响应后处理时出现异常！");
             notifyObservers(message.getHeader().getSessionID(), message.getHeader(), message.getBody());
@@ -80,14 +80,14 @@ public class ExceptionHandler extends ChannelInboundHandlerObservable implements
         context = arg0;
     }
     
-    private Message buildResp(byte result, byte[] sessionID, Object body, String facade) {
+    private Message buildResp(byte result, byte[] sessionID, Object body, String act) {
         Message message = new Message();
         Header header = new Header();
         header.setType(RemoteConstants.MessageType.SERVICE_RESP.value());
         header.setSessionID(sessionID);
         header.setResult(result);
         header.setAttachment(new HashMap<String, Object>());
-        header.getAttachment().put(NettyConstants.CALL_FACADE, facade == null || facade.trim().length() == 0 ? null : facade);
+        header.getAttachment().put(NettyConstants.CALL_ACT, act == null || act.trim().length() == 0 ? null : act);
         header.getAttachment().put(NettyConstants.HEADER_DATE, new Date());
         message.setHeader(header);
         message.setBody(body);

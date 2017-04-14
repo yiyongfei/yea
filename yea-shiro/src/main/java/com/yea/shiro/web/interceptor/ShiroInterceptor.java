@@ -21,11 +21,11 @@ import org.springframework.web.servlet.ModelAndView;
 
 import com.yea.core.remote.AbstractEndpoint;
 import com.yea.core.remote.promise.Promise;
-import com.yea.core.remote.struct.CallFacadeDef;
+import com.yea.core.remote.struct.CallAct;
+import com.yea.core.shiro.model.Menu;
+import com.yea.core.shiro.model.SystemMenu;
+import com.yea.core.shiro.model.UserPrincipal;
 import com.yea.shiro.constants.ShiroConstants;
-import com.yea.shiro.model.Menu;
-import com.yea.shiro.model.SystemMenu;
-import com.yea.shiro.model.UserPrincipal;
 import com.yea.shiro.web.mgt.WebSecurityManager;
 
 public class ShiroInterceptor implements HandlerInterceptor {
@@ -75,11 +75,11 @@ public class ShiroInterceptor implements HandlerInterceptor {
 	@SuppressWarnings("hiding")
 	class MemuComparator<Menu> implements Comparator<Menu>{
 		public int compare(Menu menu1, Menu menu2) {
-			if (((com.yea.shiro.model.Menu) menu1).getMenuSequence() == null) {
+			if (((com.yea.core.shiro.model.Menu) menu1).getMenuSequence() == null) {
 				return -1;
-			} else if (((com.yea.shiro.model.Menu) menu2).getMenuSequence() == null) {
+			} else if (((com.yea.core.shiro.model.Menu) menu2).getMenuSequence() == null) {
 				return 1;
-			} else if (((com.yea.shiro.model.Menu) menu1).getMenuSequence() > ((com.yea.shiro.model.Menu) menu2)
+			} else if (((com.yea.core.shiro.model.Menu) menu1).getMenuSequence() > ((com.yea.core.shiro.model.Menu) menu2)
 					.getMenuSequence()) {
 				return 1;
 			} else {
@@ -95,11 +95,11 @@ public class ShiroInterceptor implements HandlerInterceptor {
 		public void menu(AbstractEndpoint endpoint, Subject subject) throws AuthenticationException {
 			UserPrincipal user = (UserPrincipal) subject.getPrincipal();
 			
-			CallFacadeDef facade = new CallFacadeDef();
-			facade.setCallFacadeName("shiroFacade");
+			CallAct act = new CallAct();
+			act.setActName("shiroAct");
 			List<Map<String, Object>> listMenu = null;
 			try {
-				Promise<List<Map<String, Object>>> future = endpoint.send(facade, ShiroConstants.ShiroSQL.PERMISSION_MENU_QUERY.getSql(), new Long[]{user.getPartyId()});
+				Promise<List<Map<String, Object>>> future = endpoint.send(act, ShiroConstants.ShiroSQL.PERMISSION_MENU_QUERY.getSql(), new Long[]{user.getPartyId()});
 				listMenu = future.awaitObject(10000);
 			} catch (Throwable e) {
 	            final String message = "获取用户[" + user.getLoginName() + "]时发生了远程获取用户菜单信息失败！";
@@ -117,7 +117,7 @@ public class ShiroInterceptor implements HandlerInterceptor {
 						menu.setMenuPath((String) map.get(ShiroConstants.ShiroColumn.URL_PATH.value()) + "?menu");
 					}
 				} else {
-					menu.setMenuPath("#");
+					menu.setMenuPath("/#");
 				}
 				
 				if (map.get(ShiroConstants.ShiroColumn.MENU_SEQ.value()) != null) {
@@ -147,12 +147,12 @@ public class ShiroInterceptor implements HandlerInterceptor {
 				sb.append(menu.getParentMenuId()).append(",");
 			}
 			
-			CallFacadeDef facade = new CallFacadeDef();
-			facade.setCallFacadeName("shiroFacade");
+			CallAct act = new CallAct();
+			act.setActName("shiroAct");
 			List<Map<String, Object>> listMenu = null;
 			try {
 				String sql = ShiroConstants.ShiroSQL.PARENT_MENU_QUERY.getSql() + "(" + sb.substring(0, sb.length() - 1) + ")";
-				Promise<List<Map<String, Object>>> future = endpoint.send(facade, sql, new Object[] {});
+				Promise<List<Map<String, Object>>> future = endpoint.send(act, sql, new Object[] {});
 				listMenu = future.awaitObject(10000);
 			} catch (Throwable e) {
 	            final String message = "获取用户时发生了远程获取用户菜单信息失败！";

@@ -27,7 +27,7 @@ import org.springframework.context.ApplicationContext;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 
-import com.yea.core.base.facade.AbstractFacade;
+import com.yea.core.base.act.AbstractAct;
 import com.yea.core.base.id.UUIDGenerator;
 import com.yea.core.remote.constants.RemoteConstants;
 import com.yea.core.remote.struct.Header;
@@ -37,7 +37,7 @@ import com.yea.remote.netty.handle.AbstractServiceHandler;
 import com.yea.remote.netty.handle.NettyChannelHandler;
 
 /**
- * 服务端对客户端发送过来的请求进行处理（只能处理实现IFacade接口的门面类）
+ * 服务端对客户端发送过来的请求进行处理
  * @author yiyongfei
  * 
  */
@@ -78,30 +78,30 @@ public class ServiceServerHandler extends AbstractServiceHandler implements Nett
 		protected void compute() {
 			// TODO Auto-generated method stub
 			Message serviceResp = null;
-            String facadeName = (String) message.getHeader().getAttachment().get(NettyConstants.CALL_FACADE);
+            String actName = (String) message.getHeader().getAttachment().get(NettyConstants.CALL_ACT);
             try {
-            	AbstractFacade<?> facade = (AbstractFacade<?>) springContext.getBean(facadeName);
-            	AbstractFacade<?> cloneFacade = facade.clone();
-            	cloneFacade.setApplicationContext(springContext);
-            	cloneFacade.setMessages((Object[]) message.getBody());
-            	cloneFacade.fork();
-            	Object result = cloneFacade.join();
-                serviceResp = buildServiceResp(RemoteConstants.MessageResult.SUCCESS.value(), message.getHeader().getSessionID(), result, (String)message.getHeader().getAttachment().get(NettyConstants.CALLBACK_FACADE));
+            	AbstractAct<?> act = (AbstractAct<?>) springContext.getBean(actName);
+            	AbstractAct<?> cloneAct = act.clone();
+            	cloneAct.setApplicationContext(springContext);
+            	cloneAct.setMessages((Object[]) message.getBody());
+            	cloneAct.fork();
+            	Object result = cloneAct.join();
+                serviceResp = buildServiceResp(RemoteConstants.MessageResult.SUCCESS.value(), message.getHeader().getSessionID(), result, (String)message.getHeader().getAttachment().get(NettyConstants.CALLBACK_ACT));
             } catch (Exception ex) {
-            	LOGGER.error("处理"+facadeName+"服务[标识:" + UUIDGenerator.restore(message.getHeader().getSessionID()) + "]时出现异常：", ex);
-                serviceResp = buildServiceResp(RemoteConstants.MessageResult.FAILURE.value(), message.getHeader().getSessionID(), ex, (String)message.getHeader().getAttachment().get(NettyConstants.CALLBACK_FACADE));
+            	LOGGER.error("处理"+actName+"服务[标识:" + UUIDGenerator.restore(message.getHeader().getSessionID()) + "]时出现异常：", ex);
+                serviceResp = buildServiceResp(RemoteConstants.MessageResult.FAILURE.value(), message.getHeader().getSessionID(), ex, (String)message.getHeader().getAttachment().get(NettyConstants.CALLBACK_ACT));
             }
             nettyContext.writeAndFlush(serviceResp);
 		}
 		
-	    private Message buildServiceResp(byte result, byte[] sessionID, Object body, String facade) {
+	    private Message buildServiceResp(byte result, byte[] sessionID, Object body, String act) {
 	        Message message = new Message();
 	        Header header = new Header();
 	        header.setType(RemoteConstants.MessageType.SERVICE_RESP.value());
 	        header.setSessionID(sessionID);
 	        header.setResult(result);
 	        header.setAttachment(new HashMap<String, Object>());
-	        header.getAttachment().put(NettyConstants.CALL_FACADE, facade == null || facade.trim().length() == 0 ? null : facade);
+	        header.getAttachment().put(NettyConstants.CALL_ACT, act == null || act.trim().length() == 0 ? null : act);
 	        header.getAttachment().put(NettyConstants.HEADER_DATE, new Date());
 	        message.setHeader(header);
 	        message.setBody(body);

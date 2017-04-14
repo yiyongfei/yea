@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.yea.core.base.facade;
+package com.yea.core.base.act;
 
 import java.util.concurrent.RecursiveTask;
 
@@ -21,7 +21,7 @@ import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.transaction.PlatformTransactionManager;
 
-import com.yea.core.base.facade.exception.FacadeException;
+import com.yea.core.base.act.exception.ActException;
 
 
 /**
@@ -30,7 +30,7 @@ import com.yea.core.base.facade.exception.FacadeException;
  * @param <T>
  * 
  */
-public abstract class AbstractFacade<T> extends RecursiveTask<T> implements Cloneable {
+public abstract class AbstractAct<T> extends RecursiveTask<T> implements Cloneable {
 	protected static final long serialVersionUID = 1L;
 	protected PlatformTransactionManager txManager;
 	protected ApplicationContext context;
@@ -63,15 +63,15 @@ public abstract class AbstractFacade<T> extends RecursiveTask<T> implements Clon
 				return perform(messages);
 			}
 		} catch (Throwable e) {
-			throw new FacadeException(e.getMessage(), e);
+			throw new ActException(e.getMessage(), e);
 		}
 	}
 
 	protected abstract T perform(Object[] messages) throws Throwable;
 
 	@Override
-	public AbstractFacade<?> clone() throws CloneNotSupportedException {
-		AbstractFacade<?> obj = (AbstractFacade<?>) super.clone();
+	public AbstractAct<?> clone() throws CloneNotSupportedException {
+		AbstractAct<?> obj = (AbstractAct<?>) super.clone();
 		return obj;
 	}
 

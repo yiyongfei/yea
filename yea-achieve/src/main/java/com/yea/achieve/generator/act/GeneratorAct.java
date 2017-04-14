@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.yea.achieve.generator.facade;
+package com.yea.achieve.generator.act;
 
 
 import java.util.Map;
@@ -25,7 +25,7 @@ import org.springframework.util.StringUtils;
 
 import com.yea.achieve.generator.dto.GeneratorConfig;
 import com.yea.achieve.generator.service.GeneratorService;
-import com.yea.core.base.facade.AbstractFacade;
+import com.yea.core.base.act.AbstractAct;
 
 
 /**
@@ -33,16 +33,13 @@ import com.yea.core.base.facade.AbstractFacade;
  * @author yiyongfei
  * 
  */
-@Component("generatorFacade")
-public class GeneratorFacade extends AbstractFacade<Set<String>> {
+@Component("generatorAct")
+public class GeneratorAct extends AbstractAct<Set<String>> {
 	private static final long serialVersionUID = 1L;
 	
 	@Autowired
 	private GeneratorService generatorService;
-    /** 
-     * @throws Exception 
-     * @see com.AbstractFacade.remote.facade.AbstractFacade#perform(java.lang.Object[])
-     */
+    
     @SuppressWarnings("unchecked")
 	@Override
     protected Set<String> perform(Object[] messages) throws Exception {

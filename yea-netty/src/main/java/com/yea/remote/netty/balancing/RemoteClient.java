@@ -30,7 +30,7 @@ import com.yea.core.base.id.UUIDGenerator;
 import com.yea.core.remote.AbstractEndpoint;
 import com.yea.core.remote.constants.RemoteConstants;
 import com.yea.core.remote.observer.Observable;
-import com.yea.core.remote.struct.CallFacadeDef;
+import com.yea.core.remote.struct.CallAct;
 import com.yea.core.remote.struct.Header;
 import com.yea.core.remote.struct.Message;
 import com.yea.remote.netty.client.promise.AwaitPromise;
@@ -64,7 +64,7 @@ public class RemoteClient implements BalancingNode {
     }
     
     @SuppressWarnings({ "rawtypes", "unchecked" })
-    public <T> NettyChannelPromise<T> send(CallFacadeDef facade, List<GenericFutureListener> listeners, RemoteConstants.MessageType messageType, byte[] sessionID, Object... messages) throws Exception {
+    public <T> NettyChannelPromise<T> send(CallAct act, List<GenericFutureListener> listeners, RemoteConstants.MessageType messageType, byte[] sessionID, Object... messages) throws Exception {
         AwaitPromise observer = new AwaitPromise(new DefaultChannelPromise(channel, GlobalEventExecutor.INSTANCE));
         if(listeners != null && listeners.size() > 0){
             for(GenericFutureListener listener : listeners){
@@ -87,14 +87,14 @@ public class RemoteClient implements BalancingNode {
         header.setSessionID(sessionID);
         header.setAttachment(new HashMap<String, Object>());
         
-        String facadeName = "";
-        if(facade != null){
-        	facadeName = facade.getCallFacadeName();
-        	header.getAttachment().put(NettyConstants.CALL_FACADE, facade.getCallFacadeName());
-            header.getAttachment().put(NettyConstants.CALLBACK_FACADE, facade.getCallbackFacadeName());
+        String actName = "";
+        if(act != null){
+        	actName = act.getActName();
+        	header.getAttachment().put(NettyConstants.CALL_ACT, act.getActName());
+            header.getAttachment().put(NettyConstants.CALLBACK_ACT, act.getCallbackName());
         } else {
         	if(messageType.value() == RemoteConstants.MessageType.SERVICE_REQ.value()) {
-        		throw new Exception("发送服务请求时请提供对方系统的Facade名");
+        		throw new Exception("发送服务请求时请提供对方系统的Act名");
         	}
         }
         header.getAttachment().put(NettyConstants.HEADER_DATE, new Date());
@@ -103,7 +103,7 @@ public class RemoteClient implements BalancingNode {
         channel.pipeline().write(nettyMessage, observer);
         channel.pipeline().flush();
         
-        LOGGER.info(endpoint.getHost() + ":" + endpoint.getPort() + "将向远程节点" + remoteAddress + "请求" + facadeName + "服务[标识:" + UUIDGenerator.restore(sessionID) + "]！");
+        LOGGER.info(endpoint.getHost() + ":" + endpoint.getPort() + "将向远程节点" + remoteAddress + "请求" + actName + "服务[标识:" + UUIDGenerator.restore(sessionID) + "]！");
         return observer;
     }
     

@@ -22,7 +22,7 @@ import org.springframework.util.StringUtils;
 import com.yea.core.exception.YeaException;
 import com.yea.core.remote.AbstractEndpoint;
 import com.yea.core.remote.promise.Promise;
-import com.yea.core.remote.struct.CallFacadeDef;
+import com.yea.core.remote.struct.CallAct;
 import com.yea.shiro.constants.ShiroConstants;
 import com.yea.shiro.web.filter.authz.PermissionsAuthorizationFilter;
 
@@ -98,10 +98,10 @@ public class ShiroFilterWrapper implements ApplicationContextAware {
 	
 	private void _resetFilterChainDefinition(AbstractEndpoint nettyClient) {
 		shiroFilterBean.getFilterChainDefinitionMap().clear();
-    	CallFacadeDef facade = new CallFacadeDef();
+    	CallAct act = new CallAct();
 		try {
-			facade.setCallFacadeName("shiroFacade");
-			Promise<List<Map<String, String>>> futureRole = nettyClient.send(facade, ShiroConstants.ShiroSQL.URL_FILTER_QUERY.getSql(), null);
+			act.setActName("shiroAct");
+			Promise<List<Map<String, String>>> futureRole = nettyClient.send(act, ShiroConstants.ShiroSQL.URL_FILTER_QUERY.getSql(), null);
 			List<Map<String, String>> listUrlFilterMapper = futureRole.awaitObject(10000);
 			for(Map<String, String> mapper : listUrlFilterMapper) {
 				shiroFilterBean.getFilterChainDefinitionMap().put(mapper.get(ShiroConstants.ShiroColumn.URL_PATH.value()), mapper.get(ShiroConstants.ShiroColumn.URL_FILTER.value()));
@@ -119,7 +119,7 @@ public class ShiroFilterWrapper implements ApplicationContextAware {
 		} catch (Throwable e) {
 			throw new YeaException(e);
 		} finally {
-			facade = null;
+			act = null;
 		}
     }
     

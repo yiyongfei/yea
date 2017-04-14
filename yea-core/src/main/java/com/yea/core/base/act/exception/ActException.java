@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.yea.core.base.facade.exception;
+package com.yea.core.base.act.exception;
 
 import com.yea.core.exception.YeaException;
 import com.yea.core.exception.YeaExceptionStatus;
@@ -25,46 +25,46 @@ import com.yea.core.exception.constants.YeaErrorType;
  * @author yiyongfei
  * 
  */
-public class FacadeException extends YeaException {
+public class ActException extends YeaException {
 
     /**  */
     private static final long serialVersionUID = -9052492587652558470L;
 
-    public FacadeException() {
+    public ActException() {
         this(UNKNOWN_ERROR, null, null);
     }
 
-    public FacadeException(int code) {
+    public ActException(int code) {
         this(code, null, null);
     }
 
-    public FacadeException(int code, Throwable cause) {
+    public ActException(int code, Throwable cause) {
         this(code, null, cause);
     }
 
-    public FacadeException(Throwable cause) {
+    public ActException(Throwable cause) {
         this(UNKNOWN_ERROR, null, cause);
     }
 
-    public FacadeException(int code, String message) {
+    public ActException(int code, String message) {
         this(code, message, null);
     }
 
-    public FacadeException(String message) {
+    public ActException(String message) {
         this(UNKNOWN_ERROR, message, null);
     }
     
-    public FacadeException(String message, Throwable cause) {
+    public ActException(String message, Throwable cause) {
         this(UNKNOWN_ERROR, message, cause);
     }
     
-    public FacadeException(int inCode, String inMsg, Throwable inCause) {
+    public ActException(int inCode, String inMsg, Throwable inCause) {
         super(inMsg, YeaErrorType.SYSTEM_ERROR, YeaErrorMessage.ERR_BUSINESS, null, inCause, YeaExceptionStatus.WARNING);
         this.setStackTrace(inCause.getStackTrace());
         this.errorCode = inCode;
     }
     
-    public FacadeException(int inCode, long inErrorType, long inErrMsgType, String inMsg, Throwable inCause) {
+    public ActException(int inCode, long inErrorType, long inErrMsgType, String inMsg, Throwable inCause) {
         super(inMsg, inErrorType, inErrMsgType, null, inCause, YeaExceptionStatus.WARNING);
         this.setStackTrace(inCause.getStackTrace());
         this.errorCode = inCode;

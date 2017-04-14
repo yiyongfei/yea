@@ -19,6 +19,7 @@ import org.apache.shiro.authc.AccountException;
 import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authc.AuthenticationInfo;
 import org.apache.shiro.authc.AuthenticationToken;
+import org.apache.shiro.authc.LockedAccountException;
 import org.apache.shiro.authc.SimpleAuthenticationInfo;
 import org.apache.shiro.authc.UnknownAccountException;
 import org.apache.shiro.authc.UsernamePasswordToken;
@@ -33,10 +34,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
 
 import com.yea.core.exception.YeaException;
-import com.yea.core.remote.struct.CallFacadeDef;
+import com.yea.core.remote.struct.CallAct;
+import com.yea.core.shiro.model.UserPrincipal;
 import com.yea.shiro.constants.ShiroConstants;
 import com.yea.shiro.constants.ShiroConstants.ShiroColumn;
-import com.yea.shiro.model.UserPrincipal;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -102,6 +103,9 @@ public abstract class AbstractRealm extends AuthorizingRealm {
         if(password == null) {
         	throw new UnknownAccountException("未发现欲认证用户[" + username + "]的账号密码");
         }
+        if(ShiroConstants.LockTag.LOCK.value().equals(mapUser.get(ShiroConstants.ShiroColumn.LOGIN_LOCK_TAG.value()))) {
+        	throw new LockedAccountException("认证用户[" + username + "]账号已被锁定");
+        }
         UserPrincipal user = new UserPrincipal();
         user.setLoginName(username);
         user.setPartyId((Long)mapUser.get(ShiroConstants.ShiroColumn.LOGIN_ID.value()));
@@ -161,8 +165,8 @@ public abstract class AbstractRealm extends AuthorizingRealm {
     		permissions = new LinkedHashSet<String>();
     	}
     	
-    	CallFacadeDef facade = new CallFacadeDef();
-		facade.setCallFacadeName("shiroFacade");
+    	CallAct act = new CallAct();
+		act.setActName("shiroAct");
     	List<Map<String, Object>> listRole = getRoles(username);
 		for(Map<String, Object> mapRole : listRole) {
     		roleNames.add(String.valueOf(mapRole.get(ShiroColumn.ROLE_NAME.value())));

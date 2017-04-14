@@ -73,7 +73,7 @@ public class EhcacheInstance {
 					 .memoryStoreEvictionPolicy(MemoryStoreEvictionPolicy.LRU)
 					 .eternal(false)
 					 .timeToLiveSeconds(3600*24)
-					 .timeToIdleSeconds(3600)
+					 .timeToIdleSeconds(0)
 					 .diskExpiryThreadIntervalSeconds(120)
 					 .persistence(new PersistenceConfiguration().strategy(Strategy.NONE)));
 			manager.addCache(loginRetryCache);
@@ -85,8 +85,8 @@ public class EhcacheInstance {
 					 new CacheConfiguration(NETTY_CACHE, 20000)
 					 .memoryStoreEvictionPolicy(MemoryStoreEvictionPolicy.LRU)
 					 .eternal(false)
-					 .timeToLiveSeconds(20)
-					 .timeToIdleSeconds(15)
+					 .timeToLiveSeconds(30)
+					 .timeToIdleSeconds(0)
 					 .diskExpiryThreadIntervalSeconds(120)
 					 .persistence(new PersistenceConfiguration().strategy(Strategy.NONE)));
 			manager.addCache(nettyCache);

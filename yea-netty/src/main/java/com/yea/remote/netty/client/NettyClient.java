@@ -40,7 +40,7 @@ import com.yea.core.remote.AbstractClient;
 import com.yea.core.remote.AbstractEndpoint;
 import com.yea.core.remote.constants.RemoteConstants;
 import com.yea.core.remote.exception.RemoteException;
-import com.yea.core.remote.struct.CallFacadeDef;
+import com.yea.core.remote.struct.CallAct;
 import com.yea.core.remote.struct.Message;
 import com.yea.core.util.NetworkUtils;
 import com.yea.remote.netty.balancing.RemoteClient;
@@ -154,18 +154,18 @@ public class NettyClient extends AbstractEndpoint {
 		}
     }
 	
-	public <T> NettyChannelPromise<T> send(CallFacadeDef facade, Object... messages) throws Exception {
-        return send(facade, null, messages);
+	public <T> NettyChannelPromise<T> send(CallAct act, Object... messages) throws Exception {
+        return send(act, null, messages);
     }
     
     @SuppressWarnings("rawtypes")
-    public <T> NettyChannelPromise<T> send(CallFacadeDef facade, List<GenericFutureListener> listeners, Object... messages) throws Exception {
+    public <T> NettyChannelPromise<T> send(CallAct act, List<GenericFutureListener> listeners, Object... messages) throws Exception {
     	if(remoteClientLocator.getAll().size() == 0) {
     	    throw new RemoteException(YeaErrorMessage.ERR_APPLICATION, RemoteConstants.ExceptionType.CONNECT.value() ,"未发现连接，请先连接服务器后发送！", null);
     	}
     	byte[] sessionID = UUIDGenerator.generate();
     	RemoteClient client = remoteClientLocator.getClient(sessionID);
-    	NettyChannelPromise<T> future = client.send(facade, listeners, RemoteConstants.MessageType.SERVICE_REQ, sessionID, messages);
+    	NettyChannelPromise<T> future = client.send(act, listeners, RemoteConstants.MessageType.SERVICE_REQ, sessionID, messages);
         return future;
     }
     
@@ -271,12 +271,12 @@ public class NettyClient extends AbstractEndpoint {
 
 		}
 
-		public <T> NettyChannelPromise<T> send(CallFacadeDef facade, Object... messages) throws Exception {
-			return send(facade, null, messages);
+		public <T> NettyChannelPromise<T> send(CallAct act, Object... messages) throws Exception {
+			return send(act, null, messages);
 		}
 		
 		@SuppressWarnings("rawtypes")
-		<T> NettyChannelPromise<T> send(CallFacadeDef facade, List<GenericFutureListener> listeners, Object... messages)
+		<T> NettyChannelPromise<T> send(CallAct act, List<GenericFutureListener> listeners, Object... messages)
 				throws Exception {
 			if (remoteClientLocator.getAll().size() == 0) {
 				throw new RemoteException(YeaErrorMessage.ERR_APPLICATION,
@@ -284,7 +284,7 @@ public class NettyClient extends AbstractEndpoint {
 			}
 			byte[] sessionID = UUIDGenerator.generate();
 			RemoteClient client = remoteClientLocator.getClient(sessionID);
-			NettyChannelPromise<T> future = client.send(facade, listeners, RemoteConstants.MessageType.SERVICE_REQ, sessionID, messages);
+			NettyChannelPromise<T> future = client.send(act, listeners, RemoteConstants.MessageType.SERVICE_REQ, sessionID, messages);
 			return future;
 		}
 

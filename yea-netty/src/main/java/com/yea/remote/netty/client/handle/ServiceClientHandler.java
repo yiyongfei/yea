@@ -23,7 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
 
-import com.yea.core.base.facade.AbstractFacade;
+import com.yea.core.base.act.AbstractAct;
 import com.yea.core.exception.YeaException;
 import com.yea.core.remote.constants.RemoteConstants;
 import com.yea.core.remote.struct.Message;
@@ -37,7 +37,7 @@ import io.netty.channel.ChannelHandlerContext;
 /**
  * 
  * 客户端接到服务端响应后的处理：
- * 1、如果需回调Facade，则新起线程执行回调
+ * 1、如果需回调Act，则新起线程执行回调
  * 2、通知Promise已收到响应
  * @author yiyongfei
  * 
@@ -51,7 +51,7 @@ public class ServiceClientHandler extends AbstractServiceHandler implements Nett
 		// TODO Auto-generated method stub
 		if (message.getHeader().getType() == RemoteConstants.MessageType.SERVICE_RESP.value()) {
             LOGGER.info(ctx.channel().localAddress() + "从" + ctx.channel().remoteAddress() + "接收到响应" + ",共用时：" + (new Date().getTime() - ((Date)message.getHeader().getAttachment().get(NettyConstants.HEADER_DATE)).getTime()));
-            if(message.getHeader().getAttachment().get(NettyConstants.CALL_FACADE) != null) {
+            if(message.getHeader().getAttachment().get(NettyConstants.CALL_ACT) != null) {
 				pool.execute(new InnerTask(this.getApplicationContext(), message));
             }
             
@@ -80,16 +80,16 @@ public class ServiceClientHandler extends AbstractServiceHandler implements Nett
 		@Override
 		protected void compute() {
 			// TODO Auto-generated method stub
-			AbstractFacade<?> facade = (AbstractFacade<?>) springContext.getBean((String) message.getHeader().getAttachment().get(NettyConstants.CALL_FACADE));
+			AbstractAct<?> act = (AbstractAct<?>) springContext.getBean((String) message.getHeader().getAttachment().get(NettyConstants.CALL_ACT));
 			try {
-				AbstractFacade<?> cloneFacade = facade.clone();
-				cloneFacade.setApplicationContext(springContext);
+				AbstractAct<?> cloneAct = act.clone();
+				cloneAct.setApplicationContext(springContext);
 				if (RemoteConstants.MessageResult.SUCCESS.value() == message.getHeader().getResult()) {
-					cloneFacade.setMessages((Object[]) message.getBody());
+					cloneAct.setMessages((Object[]) message.getBody());
 				} else {
-					cloneFacade.setThrowable((Exception) message.getBody());
+					cloneAct.setThrowable((Exception) message.getBody());
 				}
-				cloneFacade.fork();
+				cloneAct.fork();
 			} catch (CloneNotSupportedException ex) {
 				throw new YeaException(ex);
 			}

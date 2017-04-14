@@ -17,12 +17,12 @@ package com.yea.core.remote.client;
 
 import java.util.concurrent.ForkJoinPool;
 
-import com.yea.core.base.facade.AbstractFacade;
+import com.yea.core.base.act.AbstractAct;
 import com.yea.core.remote.AbstractEndpoint;
 import com.yea.core.remote.client.promise.DefaultPromise;
 import com.yea.core.remote.constants.RemoteConstants;
 import com.yea.core.remote.promise.Promise;
-import com.yea.core.remote.struct.CallFacadeDef;
+import com.yea.core.remote.struct.CallAct;
 import com.yea.core.remote.struct.Header;
 
 /**
@@ -34,15 +34,15 @@ public class DefaultClient extends AbstractEndpoint {
 	private ForkJoinPool pool = new ForkJoinPool();
     
     @SuppressWarnings({ "unchecked", "rawtypes" })
-	public Promise send(CallFacadeDef facade, Object... messages) throws Exception {
+	public Promise send(CallAct act, Object... messages) throws Exception {
     	DefaultPromise promise = new DefaultPromise();
     	byte[] sessionID = new byte[]{0};
-    	AbstractFacade<?> srcfacade = (AbstractFacade<?>) this.getApplicationContext().getBean(facade.getCallFacadeName());
-		AbstractFacade<?> cloneFacade = (AbstractFacade<?>) srcfacade.clone();
-		cloneFacade.setApplicationContext(this.getApplicationContext());
-		cloneFacade.setMessages(messages);
+    	AbstractAct<?> srcAct = (AbstractAct<?>) this.getApplicationContext().getBean(act.getActName());
+		AbstractAct<?> cloneAct = (AbstractAct<?>) srcAct.clone();
+		cloneAct.setApplicationContext(this.getApplicationContext());
+		cloneAct.setMessages(messages);
 		try{
-    		Object obj = pool.invoke(cloneFacade);
+    		Object obj = pool.invoke(cloneAct);
     		Header header = new Header();
             header.setType(RemoteConstants.MessageType.SERVICE_RESP.value());
             header.setSessionID(sessionID);
