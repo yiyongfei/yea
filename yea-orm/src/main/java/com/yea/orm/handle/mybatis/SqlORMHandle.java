@@ -15,23 +15,24 @@
  */
 package com.yea.orm.handle.mybatis;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.sql.SQLException;
-import java.util.ArrayList;
+import java.sql.Time;
+import java.sql.Timestamp;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.StringTokenizer;
 
 import org.apache.ibatis.session.SqlSession;
 import org.mybatis.spring.SqlSessionTemplate;
+import org.springframework.util.StringUtils;
 
 import com.yea.orm.handle.AbstractORMHandle;
 import com.yea.orm.handle.ORMConstants;
 import com.yea.orm.handle.dto.ORMParams;
+import com.yea.orm.util.SqlMapper;
 
 /**
  * SQL执行，通过Mybatis完成
@@ -39,86 +40,72 @@ import com.yea.orm.handle.dto.ORMParams;
  *
  */
 public class SqlORMHandle<T> extends AbstractORMHandle<T> {
-    
+	private static Map<Class<?>, String> jdbcType = new HashMap<Class<?>, String> ();
+	static {
+		jdbcType.put(String.class, "VARCHAR");
+		jdbcType.put(Double.class, "DOUBLE");
+		jdbcType.put(Float.class, "FLOAT");
+		jdbcType.put(Long.class, "BIGINT");
+		jdbcType.put(Integer.class, "INTEGER");
+		jdbcType.put(Short.class, "SMALLINT");
+		jdbcType.put(Byte.class, "TINYINT");
+		jdbcType.put(Boolean.class, "BOOLEAN");
+		
+		jdbcType.put(java.util.Date.class, "DATE");
+		jdbcType.put(java.sql.Date.class, "DATE");
+		jdbcType.put(Timestamp.class, "TIMESTAMP");
+		jdbcType.put(Time.class, "TIME");
+		jdbcType.put(BigInteger.class, "DECIMAL");
+		jdbcType.put(BigDecimal.class, "DECIMAL");
+	}
+	
+	
 	public SqlORMHandle() {
 		super(ORMConstants.ORM_LEVEL.M_SQL.getCode());
 	}
 
-	@SuppressWarnings("rawtypes")
+	@SuppressWarnings({ "rawtypes", "unchecked" })
 	@Override
 	protected T execute(SqlSessionTemplate sessionTemplate, ORMParams dto) throws Exception {
 		// TODO Auto-generated method stub
 		SqlSession sqlSession = sessionTemplate.getSqlSessionFactory().openSession();
-		Connection connection = sqlSession.getConnection();;
+		SqlMapper sqlMapper = new SqlMapper(sqlSession);
 		final ORMParams tmp = dto;
-		ResultSet rs = null;
-		PreparedStatement ps = connection.prepareStatement(tmp.getSqlid());
 		try{
 			if(tmp.getSqlid().trim().toUpperCase().startsWith("SELECT")) {
-				//表示本次SQL用于查询
 				if(tmp.getParam() != null){
 					Object data = tmp.getParam();
 					if(data instanceof Object[]){
-						Object[] array = (Object[])data;
-						int index = 1;
-						for(Object obj : array){
-							setParam(ps, index++, obj);
-						}
+						return (T) sqlMapper.selectList(parseSql(tmp.getSqlid(), (Object[]) data), parseParam((Object[]) data), HashMap.class);
 					} else {
 						throw new SQLException("通过SQL查询DB时，查询参数请以Object[]的方式提供!");
 					}
+				} else {
+					return (T) sqlMapper.selectList(tmp.getSqlid(), HashMap.class);
 				}
-				rs = ps.executeQuery();
-				
-				ResultSetMetaData md = rs.getMetaData();
-				List<Map<String, Object>> listResult = new ArrayList<Map<String,Object>>();
-				int columnCount = md.getColumnCount();
-				while (rs.next()) {
-					Map<String,Object> rowData = new HashMap<String,Object>();
-					for (int i = 1; i <= columnCount; i++) {
-						rowData.put(md.getColumnLabel(i), rs.getObject(i));
-					}
-					listResult.add(rowData);
-				}
-				return (T) listResult;
 			} else {
-				if(tmp.getParam() != null){
+				if (tmp.getParam() != null) {
 					Object data = tmp.getParam();
-					if(data instanceof Object[]){
-						Object[] array = (Object[])data;
-						int index = 1;
-						for(Object obj : array){
-							setParam(ps, index++, obj);
-						}
-						return (T) Boolean.valueOf(ps.execute());
+					if (data instanceof Object[]) {
+						sqlMapper.update(parseSql(tmp.getSqlid(), (Object[]) data), parseParam((Object[]) data));
 					} else if (data instanceof Collection) {
-						for(Object array : (Collection)data){
-							if(array instanceof Object[]){
-								int index = 1;
-								for(Object obj : (Object[])array){
-									setParam(ps, index++, obj);
-								}
-								ps.addBatch();
+						for (Object array : (Collection) data) {
+							if (array instanceof Object[]) {
+								sqlMapper.update(parseSql(tmp.getSqlid(), (Object[]) data), parseParam((Object[]) data));
 							} else {
 								throw new SQLException("执行SQL时，参数请以Object[]的方式提供!");
 							}
-							
 						}
-						return (T) ps.executeBatch();
 					} else {
-						throw new SQLException("ͨ执行SQL时，如果是单条记录操作，参数请以Object[]的方式提供，如果多条记录操作，请提供Collection实例，实例里存放Object[]!");
+						throw new SQLException(
+								"ͨ执行SQL时，如果是单条记录操作，参数请以Object[]的方式提供，如果多条记录操作，请提供Collection实例，实例里存放Object[]!");
 					}
+				} else {
+					sqlMapper.update(tmp.getSqlid());
 				}
-				return (T) Boolean.valueOf(ps.execute());
+				return null;
 			}
 		} finally {
-			if(rs != null){
-				rs.close();
-			}
-			if(ps != null){
-				ps.close();
-			}
-			connection.close();
 			sqlSession.close();
 		}
 		
@@ -129,7 +116,42 @@ public class SqlORMHandle<T> extends AbstractORMHandle<T> {
 
 	}
 	
-	private void setParam(PreparedStatement ps, int index, Object param) throws SQLException{
-		ps.setObject(index, param);
+	private String parseSql(String sql, Object[] params) {
+		if (sql.indexOf("?") > 0 && params != null) {
+			StringBuffer sb = new StringBuffer();
+			StringTokenizer st = new StringTokenizer(sql, "?", true);
+			int index = 0;
+			while (st.hasMoreTokens()) {
+				String token = st.nextToken();
+				if (token.equals("?")) {
+					String type = null;
+					if (params.length > index) {
+						type = jdbcType.get(params[index].getClass());
+					}
+					if (StringUtils.isEmpty(type)) {
+						sb.append("#{param").append(index++).append("}");
+					} else {
+						sb.append("#{param").append(index++).append(", jdbcType=").append(type).append("}");
+					}
+				} else {
+					sb.append(token);
+				}
+			}
+			return sb.toString();
+		} else {
+			return sql;
+		}
 	}
+
+	private Map<String, Object> parseParam(Object[] params) {
+		Map<String, Object> mapReturn = new HashMap<String, Object>();
+		if (params != null && params.length > 0) {
+			int index = 0;
+			for (Object param : params) {
+				mapReturn.put("param" + (index++), param);
+			}
+		}
+		return mapReturn;
+	}
+	
 }
