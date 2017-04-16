@@ -33,6 +33,7 @@ public class ShiroFilterWrapper implements ApplicationContextAware {
     private String logoutUrl;
     private String authenticedUrl;
     private AbstractEndpoint endpoint;
+    private Boolean isReset = true;//是否需要重置
     
     public void setUsernameParam(String usernameParam) {
 		this.usernameParam = usernameParam;
@@ -58,6 +59,10 @@ public class ShiroFilterWrapper implements ApplicationContextAware {
 		endpoint = nettyClient;
 	}
 	
+	public void setIsReset(Boolean isReset) {
+		this.isReset = isReset;
+	}
+
 	private ShiroFilterFactoryBean shiroFilterBean;
 	private Map<String, String> mapFilterChain;
     private Map<String, Filter> mapFilter;
@@ -79,7 +84,7 @@ public class ShiroFilterWrapper implements ApplicationContextAware {
      * @throws Exception
      */
     public void reset() throws Exception {
-    	if(endpoint != null && endpoint.remoteConnects() > 0) {
+    	if(isReset && endpoint != null && endpoint.remoteConnects() > 0) {
     		DefaultFilterChainManager manager = (DefaultFilterChainManager) ((PathMatchingFilterChainResolver) ((AbstractShiroFilter)shiroFilterBean.getObject()).getFilterChainResolver()).getFilterChainManager();
     		// 清空初始权限配置
             manager.getFilterChains().clear();
@@ -93,6 +98,7 @@ public class ShiroFilterWrapper implements ApplicationContextAware {
                 manager.createChain(url, chainDefinition);
             }
             endResetTime = new Date().getTime();
+            isReset = false;
     	}
     }
 	
