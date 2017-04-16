@@ -54,6 +54,8 @@ public class DefaultClient extends AbstractEndpoint {
             header.setSessionID(sessionID);
             header.setResult(RemoteConstants.MessageResult.FAILURE.value());
     		promise.update(sessionID, header, null, ex);
+    	} finally {
+    		cloneAct = null;
     	}
     	
     	return promise;

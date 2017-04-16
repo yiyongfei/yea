@@ -81,8 +81,9 @@ public class ServiceClientHandler extends AbstractServiceHandler implements Nett
 		protected void compute() {
 			// TODO Auto-generated method stub
 			AbstractAct<?> act = (AbstractAct<?>) springContext.getBean((String) message.getHeader().getAttachment().get(NettyConstants.CALL_ACT));
+			AbstractAct<?> cloneAct = null;
 			try {
-				AbstractAct<?> cloneAct = act.clone();
+				cloneAct = act.clone();
 				cloneAct.setApplicationContext(springContext);
 				if (RemoteConstants.MessageResult.SUCCESS.value() == message.getHeader().getResult()) {
 					cloneAct.setMessages((Object[]) message.getBody());
@@ -92,6 +93,8 @@ public class ServiceClientHandler extends AbstractServiceHandler implements Nett
 				cloneAct.fork();
 			} catch (CloneNotSupportedException ex) {
 				throw new YeaException(ex);
+			} finally {
+				cloneAct = null;
 			}
 		}
     }

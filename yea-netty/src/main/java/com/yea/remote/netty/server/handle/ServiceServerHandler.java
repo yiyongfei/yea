@@ -79,9 +79,10 @@ public class ServiceServerHandler extends AbstractServiceHandler implements Nett
 			// TODO Auto-generated method stub
 			Message serviceResp = null;
             String actName = (String) message.getHeader().getAttachment().get(NettyConstants.CALL_ACT);
+            AbstractAct<?> act = (AbstractAct<?>) springContext.getBean(actName);
+            AbstractAct<?> cloneAct = null;
             try {
-            	AbstractAct<?> act = (AbstractAct<?>) springContext.getBean(actName);
-            	AbstractAct<?> cloneAct = act.clone();
+            	cloneAct = act.clone();
             	cloneAct.setApplicationContext(springContext);
             	cloneAct.setMessages((Object[]) message.getBody());
             	cloneAct.fork();
@@ -90,6 +91,8 @@ public class ServiceServerHandler extends AbstractServiceHandler implements Nett
             } catch (Exception ex) {
             	LOGGER.error("处理"+actName+"服务[标识:" + UUIDGenerator.restore(message.getHeader().getSessionID()) + "]时出现异常：", ex);
                 serviceResp = buildServiceResp(RemoteConstants.MessageResult.FAILURE.value(), message.getHeader().getSessionID(), ex, (String)message.getHeader().getAttachment().get(NettyConstants.CALLBACK_ACT));
+            } finally {
+            	cloneAct = null;
             }
             nettyContext.writeAndFlush(serviceResp);
 		}
