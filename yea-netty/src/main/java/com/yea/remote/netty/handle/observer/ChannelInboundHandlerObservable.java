@@ -20,11 +20,10 @@ import java.util.Map;
 import java.util.Vector;
 
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import net.sf.ehcache.Cache;
-import net.sf.ehcache.Element;
 
+import com.yea.cache.ehcache.instance.Instance;
 import com.yea.core.base.id.UUIDGenerator;
-import com.yea.core.cache.ehcache.EhcacheInstance;
+import com.yea.core.cache.IGeneralCache;
 import com.yea.core.remote.observer.Observable;
 import com.yea.core.remote.observer.Observer;
 import com.yea.core.remote.struct.Header;
@@ -34,11 +33,12 @@ import com.yea.core.remote.struct.Header;
  * @author yiyongfei
  */
 public class ChannelInboundHandlerObservable extends ChannelInboundHandlerAdapter implements Observable {
-    protected Cache cacheObserver = EhcacheInstance.getCacheInstance(EhcacheInstance.NETTY_CACHE);
-    private Map<String, Vector<Observer>> mapObserver;
+    @SuppressWarnings("unchecked")
+	protected IGeneralCache<String, Vector<Observer<?>>> cacheObserver = Instance.getCacheInstance(Instance.NETTY_CACHE);
+    private Map<String, Vector<Observer<?>>> mapObserver;
   
     public ChannelInboundHandlerObservable(){
-		mapObserver = new HashMap<String, Vector<Observer>>();
+		mapObserver = new HashMap<String, Vector<Observer<?>>>();
     }
     
     /**
@@ -50,22 +50,22 @@ public class ChannelInboundHandlerObservable extends ChannelInboundHandlerAdapte
      * @param   o   an observer to be added.
      * @throws NullPointerException   if the parameter o is null.
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({ "rawtypes" })
 	public synchronized void addObserver(byte[] sessionID, Observer o)  {
         if (o == null)
             throw new NullPointerException();
         String key = toString(sessionID);
         
 		if (cacheObserver != null) {
-			if (!cacheObserver.isKeyInCache(key)) {
-				cacheObserver.put(new Element(key, new Vector<Observer>()));
+			if (!cacheObserver.containsKey(key)) {
+				cacheObserver.put(key, new Vector<Observer<?>>());
 			}
-			if (!((Vector<Observer>) cacheObserver.get(key).getObjectValue()).contains(o)) {
-				((Vector<Observer>) cacheObserver.get(key).getObjectValue()).addElement(o);
+			if (!((Vector<Observer<?>>) cacheObserver.get(key)).contains(o)) {
+				((Vector<Observer<?>>) cacheObserver.get(key)).addElement(o);
 			}
 		} else {
 			if (!mapObserver.containsKey(key)) {
-				mapObserver.put(key, new Vector<Observer>());
+				mapObserver.put(key, new Vector<Observer<?>>());
 			}
 			if (!mapObserver.get(key).contains(o)) {
 				mapObserver.get(key).addElement(o);
@@ -81,11 +81,11 @@ public class ChannelInboundHandlerObservable extends ChannelInboundHandlerAdapte
      * Passing <CODE>null</CODE> to this method will have no effect.
      * @param   o   the observer to be deleted.
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({ "rawtypes" })
 	public synchronized void deleteObserver(byte[] sessionID, Observer o) {
     	if (cacheObserver != null) {
-    		if(cacheObserver.isKeyInCache(toString(sessionID))){
-    			((Vector<Observer>)cacheObserver.get(toString(sessionID)).getObjectValue()).removeElement(o);
+    		if(cacheObserver.containsKey(toString(sessionID))){
+    			((Vector<Observer<?>>)cacheObserver.get(toString(sessionID))).removeElement(o);
     		}
     	} else {
     		mapObserver.get(toString(sessionID)).removeElement(o);
@@ -126,7 +126,7 @@ public class ChannelInboundHandlerObservable extends ChannelInboundHandlerAdapte
      * @see     java.util.Observable#hasChanged()
      * @see     java.util.Observer#update(java.util.Observable, java.lang.Object)
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({ "unchecked", "rawtypes" })
 	public void notifyObservers(byte[] sessionID, Header header, Object arg) {
         /*
          * a temporary array buffer, used as a snapshot of the state of
@@ -149,7 +149,7 @@ public class ChannelInboundHandlerObservable extends ChannelInboundHandlerAdapte
              */
             
         	if (cacheObserver != null) {
-        		arrLocal = ((Vector<Observer>)cacheObserver.get(toString(sessionID)).getObjectValue()).toArray();
+        		arrLocal = ((Vector<Observer<?>>)cacheObserver.get(toString(sessionID))).toArray();
         	} else {
         		arrLocal = mapObserver.get(toString(sessionID)).toArray();
         	}
@@ -162,11 +162,10 @@ public class ChannelInboundHandlerObservable extends ChannelInboundHandlerAdapte
     /**
      * Clears the observer list so that this object no longer has any observers.
      */
-    @SuppressWarnings("unchecked")
-	public synchronized void deleteObservers(byte[] sessionID) {
+    public synchronized void deleteObservers(byte[] sessionID) {
 		if (cacheObserver != null) {
-			if(cacheObserver.isKeyInCache(toString(sessionID))){
-				((Vector<Observer>)cacheObserver.get(toString(sessionID)).getObjectValue()).removeAllElements();
+			if(cacheObserver.containsKey(toString(sessionID))){
+				((Vector<Observer<?>>)cacheObserver.get(toString(sessionID))).removeAllElements();
 			}
 		} else {
 			mapObserver.get(toString(sessionID)).removeAllElements();
@@ -179,11 +178,10 @@ public class ChannelInboundHandlerObservable extends ChannelInboundHandlerAdapte
      *
      * @return  the number of observers of this object.
      */
-    @SuppressWarnings("unchecked")
-	public synchronized int countObservers(byte[] sessionID) {
+    public synchronized int countObservers(byte[] sessionID) {
 		if (cacheObserver != null) {
-			if(cacheObserver.isKeyInCache(toString(sessionID))){
-	            return ((Vector<Observer>)cacheObserver.get(toString(sessionID)).getObjectValue()).size();
+			if(cacheObserver.containsKey(toString(sessionID))){
+	            return ((Vector<Observer<?>>)cacheObserver.get(toString(sessionID))).size();
 	        } else {
 	            return 0;
 	        }

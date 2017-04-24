@@ -16,7 +16,7 @@
 package com.yea.orm.handle.dto;
 
 import com.yea.core.base.model.BaseModel;
-import com.yea.core.cache.Cacheable;
+import com.yea.core.cache.ICacheable;
 
 public class ORMParams extends BaseModel{
 
@@ -42,8 +42,8 @@ public class ORMParams extends BaseModel{
 	}
 	
 	public String generatorCacheKey() {
-		if (param != null && param instanceof Cacheable) {
-			return ((Cacheable)param).generatorCacheKey();
+		if (param != null && param instanceof ICacheable) {
+			return ((ICacheable)param).generatorCacheKey();
 		} else {
 			return null;
 		}
