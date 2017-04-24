@@ -27,6 +27,7 @@ import java.util.StringTokenizer;
 
 import org.apache.ibatis.session.SqlSession;
 import org.mybatis.spring.SqlSessionTemplate;
+import org.springframework.util.LinkedCaseInsensitiveMap;
 import org.springframework.util.StringUtils;
 
 import com.yea.orm.handle.AbstractORMHandle;
@@ -76,12 +77,12 @@ public class SqlORMHandle<T> extends AbstractORMHandle<T> {
 				if(tmp.getParam() != null){
 					Object data = tmp.getParam();
 					if(data instanceof Object[]){
-						return (T) sqlMapper.selectList(parseSql(tmp.getSqlid(), (Object[]) data), parseParam((Object[]) data), HashMap.class);
+						return (T) sqlMapper.selectList(parseSql(tmp.getSqlid(), (Object[]) data), parseParam((Object[]) data), LinkedCaseInsensitiveMap.class);
 					} else {
 						throw new SQLException("通过SQL查询DB时，查询参数请以Object[]的方式提供!");
 					}
 				} else {
-					return (T) sqlMapper.selectList(tmp.getSqlid(), HashMap.class);
+					return (T) sqlMapper.selectList(tmp.getSqlid(), LinkedCaseInsensitiveMap.class);
 				}
 			} else {
 				if (tmp.getParam() != null) {
