@@ -15,6 +15,8 @@
  */
 package com.yea.shiro.web.mgt;
 
+import java.util.Collection;
+
 import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authc.AuthenticationToken;
 import org.apache.shiro.authc.credential.HashedCredentialsMatcher;
@@ -22,6 +24,8 @@ import org.apache.shiro.authc.pam.AtLeastOneSuccessfulStrategy;
 import org.apache.shiro.authc.pam.ModularRealmAuthenticator;
 import org.apache.shiro.authz.ModularRealmAuthorizer;
 import org.apache.shiro.authz.permission.WildcardPermissionResolver;
+import org.apache.shiro.cache.CacheManager;
+import org.apache.shiro.realm.Realm;
 import org.apache.shiro.subject.Subject;
 import org.apache.shiro.web.mgt.DefaultWebSecurityManager;
 
@@ -72,12 +76,35 @@ public class WebSecurityManager extends DefaultWebSecurityManager{
 		realm.setNettyClient(endpoint);
 		realm.setCredentialsMatcher(credentialsMatcher);
 		realm.setPermissionsLookupEnabled(true);
-		realm.setAuthenticationCachingEnabled(false);
-		realm.setAuthorizationCachingEnabled(false);
+		
+		if(this.getCacheManager() != null) {
+			realm.setAuthenticationCachingEnabled(false);
+			realm.setAuthorizationCachingEnabled(true);
+			realm.setAuthorizationCacheName("shiro-authorizationCache");
+		} else {
+			realm.setAuthenticationCachingEnabled(false);
+			realm.setAuthorizationCachingEnabled(false);
+		}
 		
 		this.setRealm(realm);
 		this.endpoint = endpoint;
 	}
+	
+	@Override
+	public void setCacheManager(CacheManager cacheManager) {
+        super.setCacheManager(cacheManager);
+        if(this.endpoint != null) {
+        	Collection<Realm> realms = this.getRealms();
+            for(Realm realm : realms) {
+            	if(realm instanceof NettyRealm) {
+            		NettyRealm tmp = (NettyRealm) realm;
+            		tmp.setAuthenticationCachingEnabled(false);
+            		tmp.setAuthorizationCachingEnabled(true);
+            		tmp.setAuthorizationCacheName("shiro-authorizationCache");
+            	}
+            }
+        }
+    }
 	
 	public AbstractEndpoint getEndpoint(){
 		return this.endpoint;

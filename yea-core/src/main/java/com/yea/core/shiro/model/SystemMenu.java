@@ -2,7 +2,10 @@ package com.yea.core.shiro.model;
 
 import java.util.Set;
 
-public class SystemMenu {
+import com.yea.core.base.model.BaseModel;
+
+public class SystemMenu extends BaseModel {
+	private static final long serialVersionUID = 1L;
 
 	private String currMenu;
 	private Set<Menu> menus;

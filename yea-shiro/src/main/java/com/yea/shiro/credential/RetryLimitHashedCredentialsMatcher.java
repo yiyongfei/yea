@@ -22,11 +22,9 @@ import org.apache.shiro.authc.AuthenticationToken;
 import org.apache.shiro.authc.ExcessiveAttemptsException;
 import org.apache.shiro.authc.credential.HashedCredentialsMatcher;
 
-import com.yea.core.cache.ehcache.EhcacheInstance;
+import com.yea.cache.ehcache.instance.Instance;
+import com.yea.core.cache.IGeneralCache;
 import com.yea.shiro.constants.ShiroConstants;
-
-import net.sf.ehcache.Cache;
-import net.sf.ehcache.Element;
 
 /**
  * 登录重试次数限制
@@ -34,13 +32,14 @@ import net.sf.ehcache.Element;
  *
  */
 public class RetryLimitHashedCredentialsMatcher extends HashedCredentialsMatcher {
-	private Cache shiroCache = EhcacheInstance.getCacheInstance(EhcacheInstance.LOGIN_RETRY_CACHE);
+	@SuppressWarnings("unchecked")
+	private IGeneralCache<String, AtomicInteger> shiroCache = Instance.getCacheInstance(Instance.LOGIN_RETRY_CACHE);
 	
 	@Override
     public boolean doCredentialsMatch(AuthenticationToken token, AuthenticationInfo info) {
         String username = (String)token.getPrincipal();
-		if (shiroCache.isKeyInCache(username) && shiroCache.get(username) != null) {
-			AtomicInteger retryCount = (AtomicInteger) shiroCache.get(username).getObjectValue();
+		if (shiroCache.containsKey(username) && shiroCache.get(username) != null) {
+			AtomicInteger retryCount = shiroCache.get(username);
 			if (retryCount.get() > ShiroConstants.LOGIN_RETRY_LIMIT) {
 				throw new ExcessiveAttemptsException("登录的失败次数过多，请稍候再登录");
 			}
@@ -50,13 +49,12 @@ public class RetryLimitHashedCredentialsMatcher extends HashedCredentialsMatcher
 		if (matches) {
 			shiroCache.remove(username);
 		} else {
-			Element element = shiroCache.get(username);
-			if(element == null) {
-				element = new Element(username , new AtomicInteger(1));
-				shiroCache.put(element);
+			AtomicInteger retryCount = shiroCache.get(username);
+			if(retryCount == null) {
+				shiroCache.put(username, new AtomicInteger(1));
+			} else {
+				retryCount.incrementAndGet();
 			}
-			AtomicInteger retryCount = (AtomicInteger) element.getObjectValue();
-			retryCount.incrementAndGet();
 		}
 		
         return matches;

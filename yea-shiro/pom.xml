@@ -30,7 +30,7 @@
 		
         <dependency>
 	        <groupId>com.yea</groupId>
-	        <artifactId>yea-core</artifactId>
+	        <artifactId>yea-cache</artifactId>
 	    </dependency>
     </dependencies>
 </project>

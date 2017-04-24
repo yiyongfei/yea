@@ -37,7 +37,7 @@ public class Serializer extends AbstractSerializer {
 	 */
 	private static final long serialVersionUID = 1L;
 	
-	private FSTConfiguration conf;
+	protected FSTConfiguration conf;
 	public Serializer() {
 		super();
 		conf = FSTConfiguration.createDefaultConfiguration();
