@@ -15,7 +15,7 @@
  */
 package com.yea.core.cache;
 
-public interface Cacheable {
+public interface ICacheable {
 
 	/**
 	 * 用于生成应用缓存的Key

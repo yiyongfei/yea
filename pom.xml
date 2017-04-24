@@ -21,7 +21,8 @@
         <fst.version>2.48</fst.version>
 		<hessian.version>4.0.38</hessian.version>
 		<jackson.version>2.8.7</jackson.version>
-		<ehcache.version>2.8.8</ehcache.version>
+		<ehcache.version>3.3.1</ehcache.version>
+		<jedis.version>2.9.0</jedis.version>
 		<freemarker.version>2.3.23</freemarker.version>
 		<netty.version>4.0.25.Final</netty.version>
 		<curator.version>2.12.0</curator.version>
@@ -120,11 +121,16 @@
 			<!-- 缓存支持 -->
 			<!-- ehcache  -->
 	        <dependency>
-	            <groupId>net.sf.ehcache</groupId>
+	            <groupId>org.ehcache</groupId>
 	            <artifactId>ehcache</artifactId>
 	            <version>${ehcache.version}</version>
 	        </dependency>
-	        
+	        <!-- redis  -->
+	        <dependency>
+			    <groupId>redis.clients</groupId>
+			    <artifactId>jedis</artifactId>
+			    <version>${jedis.version}</version>
+			</dependency>
 	        <!-- mybatis spring支持 -->
 		    <dependency>
 			    <groupId>org.mybatis</groupId>
@@ -192,6 +198,11 @@
 			</dependency>
 			<dependency>
 			    <groupId>com.yea</groupId>
+			    <artifactId>yea-cache</artifactId>
+			    <version>${yea.version}</version>
+			</dependency>
+			<dependency>
+			    <groupId>com.yea</groupId>
 			    <artifactId>yea-netty</artifactId>
 			    <version>${yea.version}</version>
 			</dependency>
@@ -210,5 +221,6 @@
         <module>yea-achieve</module>
         <module>yea-dispatcher</module>
         <module>yea-web</module>
+        <module>yea-cache</module>
     </modules>
 </project>
