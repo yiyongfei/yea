@@ -58,13 +58,14 @@ public class RedisCache<K extends Serializable, V> implements IGeneralCache<K, V
 	private ISerializer serializer;
 	private ICachePool<K, V> cachePool;
 	private byte[] cacheName;
-	private byte[] timeUnit;
+	private TimeUnit timeUnit;//按秒来计算超时时间
 	private Long expireTime;
+	private Long expireSeconds;
 	private Map<Long, Object> innerMap = null;
 	
 	public RedisCache() {
 		serializer = new Serializer();
-		setTimeUnit(TimeUnit.MILLISECONDS);
+		setTimeUnit(TimeUnit.SECONDS);
 		cacheName = SafeEncoder.encode("DEFAULT");
 		innerMap = new ConcurrentHashMap<Long, Object>();
 	}
@@ -74,10 +75,19 @@ public class RedisCache<K extends Serializable, V> implements IGeneralCache<K, V
 	}
 	
 	public void setTimeUnit(TimeUnit timeUnit) {
-		if(TimeUnit.SECONDS.equals(timeUnit)) {
-			this.timeUnit = SafeEncoder.encode("EX");
-		} else if (TimeUnit.MILLISECONDS.equals(timeUnit)) {
-			this.timeUnit = SafeEncoder.encode("PX");
+		this.timeUnit = timeUnit;
+		if(expireTime != null) {
+			if(TimeUnit.MILLISECONDS.equals(timeUnit)) {
+				expireSeconds = expireTime / 1000;
+			} else if (TimeUnit.MINUTES.equals(timeUnit)) {
+				expireSeconds = expireTime * 60;
+			} else if (TimeUnit.HOURS.equals(timeUnit)) {
+				expireSeconds = expireTime * 60 * 60;
+			} else if (TimeUnit.DAYS.equals(timeUnit)) {
+				expireSeconds = expireTime * 24 * 60 * 60;
+			} else {
+				expireSeconds = expireTime;
+			} 
 		}
 	}
 	
@@ -91,6 +101,17 @@ public class RedisCache<K extends Serializable, V> implements IGeneralCache<K, V
 	
 	public void setExpireTime(Long expireTime) {
 		this.expireTime = expireTime;
+		if (TimeUnit.MILLISECONDS.equals(timeUnit)) {
+			expireSeconds = expireTime / 1000;
+		} else if (TimeUnit.MINUTES.equals(timeUnit)) {
+			expireSeconds = expireTime * 60;
+		} else if (TimeUnit.HOURS.equals(timeUnit)) {
+			expireSeconds = expireTime * 60 * 60;
+		} else if (TimeUnit.DAYS.equals(timeUnit)) {
+			expireSeconds = expireTime * 24 * 60 * 60;
+		} else {
+			expireSeconds = expireTime;
+		}
 	}
 
 	@Override
@@ -123,15 +144,15 @@ public class RedisCache<K extends Serializable, V> implements IGeneralCache<K, V
 			commands = (BinaryJedisCommands) cachePool.getResource();
 			if (CacheConstants.PutMode.UN_LIMIT.value().equals(putMode)) {
 				_value = this.parseValue(commands.getSet(_key, toValue(value)));
+				if (expireSeconds != null) {
+					commands.expire(_key, expireSeconds.intValue());
+				}
 			} else {
 				_value = get(key);
-				commands.set(_key, toValue(value), SafeEncoder.encode(putMode));
-			}
-			if (expireTime != null) {
-				if (SafeEncoder.encode(timeUnit).equals("EX")) {
-					commands.expire(_key, Integer.valueOf(Long.toString(expireTime)));
+				if (expireSeconds != null) {
+					commands.set(_key, toValue(value), SafeEncoder.encode(putMode), SafeEncoder.encode("EX"), expireSeconds);
 				} else {
-					commands.pexpire(_key, expireTime);
+					commands.set(_key, toValue(value), SafeEncoder.encode(putMode));
 				}
 			}
 			return _value;
@@ -140,6 +161,53 @@ public class RedisCache<K extends Serializable, V> implements IGeneralCache<K, V
 			commands = null;
 			_key = null;
 			_value = null;
+		}
+	}
+	
+	public void expire(K key, TimeUnit timeUnit, Long expireTime) {
+		BinaryJedisCommands commands = null;
+		try {
+			commands = (BinaryJedisCommands) cachePool.getResource();
+			Long seconds = 0L;
+			if (TimeUnit.MILLISECONDS.equals(timeUnit)) {
+				seconds = expireTime / 1000;
+			} else if(TimeUnit.SECONDS.equals(timeUnit)) {
+				seconds = expireTime;
+			} else if (TimeUnit.MINUTES.equals(timeUnit)) {
+				seconds = expireTime * 60;
+			} else if (TimeUnit.HOURS.equals(timeUnit)) {
+				seconds = expireTime * 60 * 60;
+			} else if (TimeUnit.DAYS.equals(timeUnit)) {
+				seconds = expireTime * 24 * 60 * 60;
+			} else {
+				throw new CacheException("设置的时间单位不正确，请重新设置");
+			} 
+			commands.expire(toKey(key), seconds.intValue());
+		} finally {
+			cachePool.returnResource(commands);
+			commands = null;
+		}
+	}
+	
+	public void expireAt(K key, long unixTime) {
+		BinaryJedisCommands commands = null;
+		try {
+			commands = (BinaryJedisCommands) cachePool.getResource();
+			commands.expireAt(toKey(key), unixTime);
+		} finally {
+			cachePool.returnResource(commands);
+			commands = null;
+		}
+	}
+	
+	public Long ttl(K key) {
+		BinaryJedisCommands commands = null;
+		try {
+			commands = (BinaryJedisCommands) cachePool.getResource();
+			return commands.ttl(toKey(key));
+		} finally {
+			cachePool.returnResource(commands);
+			commands = null;
 		}
 	}
 	
@@ -330,15 +398,16 @@ public class RedisCache<K extends Serializable, V> implements IGeneralCache<K, V
 		byte[] _key = toKey(key);
 		try {
 			if (CacheConstants.PutMode.UN_LIMIT.value().equals(putMode)) {
-				commands.set(_key, toValue(value));
-			} else {
-				commands.set(_key, toValue(value), SafeEncoder.encode(putMode));
-			}
-			if(expireTime != null) {
-				if(SafeEncoder.encode(timeUnit).equals("EX")) {
-					commands.expire(_key, Integer.valueOf(Long.toString(expireTime)));
+				if (expireSeconds != null) {
+					commands.setex(_key, expireSeconds.intValue(), toValue(value));
 				} else {
-					commands.pexpire(_key, expireTime);
+					commands.set(_key, toValue(value));
+				}
+			} else {
+				if (expireSeconds != null) {
+					commands.set(_key, toValue(value), SafeEncoder.encode(putMode), SafeEncoder.encode("EX"), expireSeconds.intValue());
+				} else {
+					commands.set(_key, toValue(value), SafeEncoder.encode(putMode));
 				}
 			}
 		} finally {

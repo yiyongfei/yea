@@ -262,6 +262,9 @@ public class NettyClient extends AbstractEndpoint {
 						if (!this.isStop()) {
 							connect(socketAddress);
 						}
+					} else {
+						super._Notstop();
+						LOGGER.info("连接服务器（" + remoteAddress + "）成功！");
 					}
 				} else {
 					super._Notstop();

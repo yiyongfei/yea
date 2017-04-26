@@ -57,7 +57,7 @@ public class ${tableWrapper.pkName} extends BasePK {
         return
         <#list tableWrapper.tableInfo.primaryKeyColumns?if_exists as field>
 	       <#if field.jdbcType == 1 || field.jdbcType == 12 >
-	          (${field.javaProperty} == null || ${field.javaProperty}.trim().length == 0)
+	          (${field.javaProperty} == null || ${field.javaProperty}.trim().length() == 0)
 	       <#else>
 	          (${field.javaProperty} == null)
 	       </#if>

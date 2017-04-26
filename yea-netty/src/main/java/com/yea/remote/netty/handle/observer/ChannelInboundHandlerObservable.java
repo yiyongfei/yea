@@ -19,11 +19,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Vector;
 
+import org.ehcache.Cache;
+
 import io.netty.channel.ChannelInboundHandlerAdapter;
 
-import com.yea.cache.ehcache.instance.Instance;
 import com.yea.core.base.id.UUIDGenerator;
-import com.yea.core.cache.IGeneralCache;
+import com.yea.core.cache.ehcache.EhcacheInstance;
 import com.yea.core.remote.observer.Observable;
 import com.yea.core.remote.observer.Observer;
 import com.yea.core.remote.struct.Header;
@@ -34,7 +35,7 @@ import com.yea.core.remote.struct.Header;
  */
 public class ChannelInboundHandlerObservable extends ChannelInboundHandlerAdapter implements Observable {
     @SuppressWarnings("unchecked")
-	protected IGeneralCache<String, Vector<Observer<?>>> cacheObserver = Instance.getCacheInstance(Instance.NETTY_CACHE);
+	protected Cache<String, Vector<Observer<?>>> cacheObserver = EhcacheInstance.getCacheInstance(EhcacheInstance.NETTY_CACHE);
     private Map<String, Vector<Observer<?>>> mapObserver;
   
     public ChannelInboundHandlerObservable(){

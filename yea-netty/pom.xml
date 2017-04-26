@@ -16,7 +16,7 @@
 		
         <dependency>
 			<groupId>com.yea</groupId>
-			<artifactId>yea-cache</artifactId>
+			<artifactId>yea-core</artifactId>
 		</dependency>
 		
     </dependencies>

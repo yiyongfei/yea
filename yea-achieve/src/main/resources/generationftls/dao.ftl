@@ -23,9 +23,11 @@ import ${className.fullyQualifiedNameWithoutTypeParameters};
 import org.springframework.stereotype.Repository;
 
 import ${tableWrapper.entityPackagePath}.${tableWrapper.entityName};
+import ${tableWrapper.pkPackagePath}.${tableWrapper.pkName};
+import ${tableWrapper.aggregatePackagePath}.${tableWrapper.aggregateName};
 
 @Repository
-public interface ${tableWrapper.daoName} {
+public interface ${tableWrapper.daoName}<T> {
 
     public int insert(${tableWrapper.entityName} ${tableWrapper.entityVar});
     
@@ -35,14 +37,14 @@ public interface ${tableWrapper.daoName} {
 	
 	public int updateSelective(${tableWrapper.entityName} ${tableWrapper.entityVar});
 	
-	public int delete(${tableWrapper.entityName} ${tableWrapper.entityVar});
+	public int delete(${tableWrapper.pkName} ${tableWrapper.pkVar});
 	
 	public int deleteBySelective(${tableWrapper.entityName} ${tableWrapper.entityVar});
 	
-	public ${tableWrapper.entityName} load(${tableWrapper.entityName} ${tableWrapper.entityVar});
+	public ${tableWrapper.aggregateName} load(${tableWrapper.pkName} ${tableWrapper.pkVar});
 	
-	public List<${tableWrapper.entityName}> selectBySelective(${tableWrapper.entityName} ${tableWrapper.entityVar});
+	public List<${tableWrapper.aggregateName}> selectBySelective(${tableWrapper.aggregateName} ${tableWrapper.aggregateVar});
 	
-	public int selectBySelectiveCount(${tableWrapper.entityName} ${tableWrapper.entityVar});
+	public int selectBySelectiveCount(${tableWrapper.aggregateName} ${tableWrapper.aggregateVar});
 	
 }

@@ -32,6 +32,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.TreeMap;
@@ -46,6 +47,7 @@ import com.yea.achieve.generator.dto.DaoWrapper;
 import com.yea.achieve.generator.dto.EntityWrapper;
 import com.yea.achieve.generator.dto.GeneratorConfig;
 import com.yea.achieve.generator.dto.PKWrapper;
+import com.yea.achieve.generator.dto.RepositoryWrapper;
 import com.yea.achieve.generator.dto.SqlmapWrapper;
 import com.yea.achieve.generator.dto.Wrapper;
 import com.yea.achieve.generator.dto.java.FullyQualifiedJavaType;
@@ -71,6 +73,7 @@ import freemarker.template.TemplateException;
 public class GeneratorServiceImpl implements GeneratorService, ApplicationContextAware {
 	@SuppressWarnings("rawtypes")
 	private BaseDAO baseDao;
+	private Map<File, String> mapWrite = new HashMap<File, String>();
 	
 	@SuppressWarnings("rawtypes")
 	public void setApplicationContext(ApplicationContext arg0) throws BeansException {
@@ -118,12 +121,22 @@ public class GeneratorServiceImpl implements GeneratorService, ApplicationContex
 				wrapper = new DaoWrapper(table, config);
 				_generate(wrapper);
 				
+				wrapper = new RepositoryWrapper(table, config);
+				_generate(wrapper);
+				
 //				wrapper = new ServiceWrapper(table, config);
 //				_generate(wrapper);
 //				
 //				wrapper = new ServiceImplWrapper(table, config);
 //				_generate(wrapper);
 			}
+			
+			Set<Entry<File, String>> files = mapWrite.entrySet();
+			for(Entry<File, String> file : files) {
+				writeFile(file.getValue(), file.getKey());
+			}
+			
+			mapWrite.clear();
 			return tableNames;
 		} finally {
 			conn.close();
@@ -150,7 +163,7 @@ public class GeneratorServiceImpl implements GeneratorService, ApplicationContex
 		StringWriter bw = new StringWriter();
 		template.process(rootMap, bw);
 		
-		writeFile(bw.toString(), file);
+		mapWrite.put(file, bw.toString());
 	}
 	
 	private Collection<IntrospectedTable> calculateIntrospectedTables(DatabaseMetaData databaseMetaData, String catalog, String schema, String tableName, boolean isWildcardEscapingEnabled, String[] tableTypes) throws SQLException {

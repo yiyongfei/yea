@@ -15,20 +15,42 @@
  */
 package com.yea.core.cache.ehcache;
 
+import java.io.Serializable;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+
+import org.ehcache.Cache;
+import org.ehcache.CacheManager;
+import org.ehcache.config.builders.CacheConfigurationBuilder;
+import org.ehcache.config.builders.CacheManagerBuilder;
+import org.ehcache.config.builders.ResourcePoolsBuilder;
+import org.ehcache.config.units.MemoryUnit;
+import org.ehcache.expiry.Duration;
+import org.ehcache.expiry.Expirations;
 
 /**
  * 
  * @author yiyongfei
  *
  */
+@SuppressWarnings("rawtypes")
 public class EhcacheInstance {
-//	public final static String LOGIN_RETRY_CACHE = "loginRetryCache";
-//	public final static String NETTY_CACHE = "nettyCache";
+	public final static String NETTY_CACHE = "nettyCache";
 	
-//	private static CacheManager manager = null;
-//	@SuppressWarnings("rawtypes")
-//	private static Map<String, IGeneralCache> mapCache = new ConcurrentHashMap<String, IGeneralCache>();
-//	static {
+	private static Map<String, Cache> mapCache = new ConcurrentHashMap<String, Cache>();
+	static {
+		CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder().build(true);
+		/*Netty缓冲区缓存*/
+		CacheConfigurationBuilder<Serializable, Serializable> nettyConfiguration = CacheConfigurationBuilder
+				.newCacheConfigurationBuilder(Serializable.class, Serializable.class,
+						ResourcePoolsBuilder.newResourcePoolsBuilder().heap(1, MemoryUnit.MB))
+				.withExpiry(Expirations.timeToLiveExpiration(Duration.of(60, TimeUnit.SECONDS)));
+		
+		cacheManager.createCache(NETTY_CACHE, nettyConfiguration);
+		Cache cache = cacheManager.getCache(NETTY_CACHE, Serializable.class, Serializable.class);
+		mapCache.put(NETTY_CACHE, cache);
+		
 //		mapCache = new ConcurrentHashMap<String, Cache>();
 //		Configuration configuration = new Configuration()//
 //				.diskStore(new DiskStoreConfiguration().path("java.io.tmpdir"))// 临时文件目录
@@ -77,17 +99,11 @@ public class EhcacheInstance {
 //			mapCache.put(NETTY_CACHE, nettyCache);
 //		}
 //		
-//	}
+	}
 	
 	private EhcacheInstance(){};
-//	
-//	@SuppressWarnings("rawtypes")
-//	public static void setCacheInstance(String cacheName, IGeneralCache cache) {
-//		mapCache.put(cacheName, cache);
-//	}
-//	
-//	@SuppressWarnings("rawtypes")
-//	public static IGeneralCache getCacheInstance(String cacheName) {
-//		return mapCache.get(cacheName);
-//	}
+
+	public static Cache getCacheInstance(String cacheName) {
+		return mapCache.get(cacheName);
+	}
 }

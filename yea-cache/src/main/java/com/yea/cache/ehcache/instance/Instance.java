@@ -17,7 +17,6 @@ package com.yea.cache.ehcache.instance;
 
 import java.io.Serializable;
 import java.util.Map;
-import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -32,7 +31,6 @@ import org.ehcache.expiry.Expirations;
 
 import com.yea.cache.ehcache.cache.EhcacheCache;
 import com.yea.core.cache.IGeneralCache;
-import com.yea.core.remote.observer.Observer;
 
 
 /**
@@ -43,7 +41,7 @@ import com.yea.core.remote.observer.Observer;
 @SuppressWarnings("rawtypes")
 public class Instance {
 	public final static String LOGIN_RETRY_CACHE = "loginRetryCache";
-	public final static String NETTY_CACHE = "nettyCache";
+//	public final static String NETTY_CACHE = "nettyCache";
 	
 	private static Map<String, IGeneralCache> mapCache = new ConcurrentHashMap<String, IGeneralCache>();
 	static {
@@ -63,16 +61,16 @@ public class Instance {
 		mapCache.put(LOGIN_RETRY_CACHE, cacheInstance);
 		
 		/*Netty缓冲区缓存*/
-		CacheConfigurationBuilder<Serializable, Serializable> nettyConfiguration = CacheConfigurationBuilder
-				.newCacheConfigurationBuilder(Serializable.class, Serializable.class,
-						ResourcePoolsBuilder.newResourcePoolsBuilder().heap(1, MemoryUnit.MB))
-				.withExpiry(Expirations.timeToLiveExpiration(Duration.of(30, TimeUnit.SECONDS)));
-		
-		cacheManager.createCache(NETTY_CACHE, nettyConfiguration);
-		cacheInstance = new EhcacheCache<String, Vector<Observer>>();
-		cacheInstance.setCacheName(NETTY_CACHE);
-		cacheInstance.setCacheManager(cacheManager);
-		mapCache.put(NETTY_CACHE, cacheInstance);
+//		CacheConfigurationBuilder<Serializable, Serializable> nettyConfiguration = CacheConfigurationBuilder
+//				.newCacheConfigurationBuilder(Serializable.class, Serializable.class,
+//						ResourcePoolsBuilder.newResourcePoolsBuilder().heap(1, MemoryUnit.MB))
+//				.withExpiry(Expirations.timeToLiveExpiration(Duration.of(30, TimeUnit.SECONDS)));
+//		
+//		cacheManager.createCache(NETTY_CACHE, nettyConfiguration);
+//		cacheInstance = new EhcacheCache<String, Vector<Observer>>();
+//		cacheInstance.setCacheName(NETTY_CACHE);
+//		cacheInstance.setCacheManager(cacheManager);
+//		mapCache.put(NETTY_CACHE, cacheInstance);
 	}
 	
 	private Instance(){};
