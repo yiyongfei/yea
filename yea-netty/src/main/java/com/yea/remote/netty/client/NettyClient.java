@@ -38,9 +38,11 @@ import com.yea.core.base.id.UUIDGenerator;
 import com.yea.core.exception.constants.YeaErrorMessage;
 import com.yea.core.remote.AbstractClient;
 import com.yea.core.remote.AbstractEndpoint;
+import com.yea.core.remote.client.ClientRegister;
 import com.yea.core.remote.constants.RemoteConstants;
 import com.yea.core.remote.exception.RemoteException;
 import com.yea.core.remote.struct.CallAct;
+import com.yea.core.remote.struct.Header;
 import com.yea.core.remote.struct.Message;
 import com.yea.core.util.NetworkUtils;
 import com.yea.remote.netty.balancing.RemoteClient;
@@ -130,6 +132,8 @@ public class NettyClient extends AbstractEndpoint {
 				}
     		}
     	}
+		
+		ClientRegister.getInstance().registerEndpoint(getRegisterName(), this);
 		
 		if (this.getDispatcher() != null) {
 			try{
@@ -358,7 +362,12 @@ public class NettyClient extends AbstractEndpoint {
 										@Override
 									    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 									        Message message = (Message) msg;
-									        if (message.getHeader() != null && message.getHeader().getType() == RemoteConstants.MessageType.STOP.value()) {
+									        if (message.getHeader() != null && message.getHeader().getType() == RemoteConstants.MessageType.ACTLOOKUP_RESP.value()) {
+												/* 向Client注册中心注册ActName */
+									        	String registerName = (String) message.getHeader().getAttachment().get("registerName");
+									        	String[] actnames = (String[]) message.getHeader().getAttachment().get("actName");
+									        	ClientRegister.getInstance().registerAct(registerName, actnames);
+											} else if (message.getHeader() != null && message.getHeader().getType() == RemoteConstants.MessageType.STOP.value()) {
 									        	LOGGER.info(ctx.channel().localAddress() + "从" + ctx.channel().remoteAddress() + "接收服务端将关闭服务的请求！");
 									        	Collection<BalancingNode> collection = remoteClientLocator.getLocator(ctx.channel().remoteAddress());
 												for (BalancingNode node : collection) {
@@ -376,6 +385,15 @@ public class NettyClient extends AbstractEndpoint {
 											RemoteClient remoteClient = new RemoteClient(ctx.channel(), _instance());
 											LOGGER.info("远程节点" + remoteClient.getSocketAddress() + "已加入本地节点"+_instance().getHost()+":"+_instance().getPort()+"负载均衡池！");
 											remoteClientLocator.addLocator(remoteClient);
+											
+											/*向服务端发送查找ACT名称的请求，以向Client注册中心注册Act*/
+											Message nettyMessage = new Message();
+									        Header header = new Header();
+									        header.setType(RemoteConstants.MessageType.ACTLOOKUP_REQ.value());
+									        header.setSessionID(UUIDGenerator.generate());
+									        nettyMessage.setHeader(header);
+									        ctx.write(nettyMessage);
+									        ctx.flush();
 										}
 										
 										@Override

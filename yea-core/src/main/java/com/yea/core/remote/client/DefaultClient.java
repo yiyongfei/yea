@@ -33,6 +33,19 @@ import com.yea.core.remote.struct.Header;
 public class DefaultClient extends AbstractEndpoint {
 	private ForkJoinPool pool = new ForkJoinPool();
     
+	public DefaultClient() {
+		this.setRegisterName("DEFAULT_CLIENT");
+	}
+	
+	public void connect() throws Exception {
+		ClientRegister.getInstance().registerEndpoint(this.getRegisterName(), this);
+		String[] beanames = this.getApplicationContext().getBeanNamesForType(AbstractAct.class, true, true);
+		ClientRegister.getInstance().registerAct(getRegisterName(), beanames);
+	}
+	
+	public void disconnect() throws Exception {
+	}
+	
     @SuppressWarnings({ "unchecked", "rawtypes" })
 	public Promise send(CallAct act, Object... messages) throws Exception {
     	DefaultPromise promise = new DefaultPromise();
@@ -65,5 +78,3 @@ public class DefaultClient extends AbstractEndpoint {
     	return 1;
     }
 }
-
-

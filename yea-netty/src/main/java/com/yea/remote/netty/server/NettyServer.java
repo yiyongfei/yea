@@ -17,6 +17,7 @@ package com.yea.remote.netty.server;
 
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -30,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
 
 import com.yea.core.balancing.hash.BalancingNode;
+import com.yea.core.base.act.AbstractAct;
 import com.yea.core.base.id.UUIDGenerator;
 import com.yea.core.exception.constants.YeaErrorMessage;
 import com.yea.core.remote.AbstractEndpoint;
@@ -291,7 +293,29 @@ public class NettyServer extends AbstractEndpoint {
                                     
                                 }
                                 ch.pipeline().addLast(UUIDGenerator.generateString(), new ChannelInboundHandlerAdapter(){
-                                    @Override
+									@Override
+									public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+										Message message = (Message) msg;
+										if (message.getHeader() != null && message.getHeader().getType() == RemoteConstants.MessageType.ACTLOOKUP_REQ.value()) {
+											/* 检索当前服务所有注册的ActName */
+											String[] actnames = getApplicationContext().getBeanNamesForType(AbstractAct.class, true, true);
+											Message respMessage = new Message();
+											Header header = new Header();
+											header.setType(RemoteConstants.MessageType.ACTLOOKUP_RESP.value());
+											header.setSessionID(message.getHeader().getSessionID());
+											header.setResult(RemoteConstants.MessageResult.SUCCESS.value());
+											header.setAttachment(new HashMap<String, Object>());
+											header.getAttachment().put("registerName", getRegisterName());
+											header.getAttachment().put("actName", actnames);
+											respMessage.setHeader(header);
+											ctx.write(respMessage);
+											ctx.flush();
+										} else {
+											ctx.fireChannelRead(msg);
+										}
+									}
+                                	
+                                	@Override
                                     public void channelActive(ChannelHandlerContext ctx) throws Exception {
 										if (!isStop()) {
 											super.channelActive(ctx);
