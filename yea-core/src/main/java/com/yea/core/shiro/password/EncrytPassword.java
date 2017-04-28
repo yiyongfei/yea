@@ -15,10 +15,9 @@
  */
 package com.yea.core.shiro.password;
 
-import org.apache.shiro.crypto.hash.Md5Hash;
-import org.apache.shiro.crypto.hash.SimpleHash;
-
 import com.yea.core.base.id.RandomIDGennerator;
+import com.yea.core.util.HashUtil;
+import com.yea.core.util.HexUtil;
 
 /**
  * 密码加密
@@ -37,12 +36,16 @@ public class EncrytPassword {
 		return this.salt;
 	}
 	
+	/**
+	 * 需与Shiro的密码加密方式保持一致
+	 * @param password
+	 */
 	public EncrytPassword(String password) {
 		this.salt = RandomIDGennerator.get().toHexString();
-        SimpleHash simpleHash = new SimpleHash(PASSWORD_HASH.getAlgorithmName(), password, salt, HASH_ITERATIONS);  
-        this.encrytPassword = simpleHash.toHex();
+		byte[] hash = HashUtil.hash(PASSWORD_HASH, password, salt, HASH_ITERATIONS);
+		this.encrytPassword = HexUtil.encodeToString(hash);
 	}
 	
-	public final static SimpleHash PASSWORD_HASH = new Md5Hash();
+	public final static String PASSWORD_HASH = "MD5";
 	public final static int HASH_ITERATIONS = 2;
 }

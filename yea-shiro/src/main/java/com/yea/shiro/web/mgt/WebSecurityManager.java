@@ -58,7 +58,7 @@ public class WebSecurityManager extends DefaultWebSecurityManager{
 
 		// 设置密码校验Matcher
 		credentialsMatcher = new RetryLimitHashedCredentialsMatcher();
-		credentialsMatcher.setHashAlgorithmName(EncrytPassword.PASSWORD_HASH.getAlgorithmName());
+		credentialsMatcher.setHashAlgorithmName(EncrytPassword.PASSWORD_HASH);
 		credentialsMatcher.setHashIterations(EncrytPassword.HASH_ITERATIONS);
 		credentialsMatcher.setStoredCredentialsHexEncoded(true);
 		
