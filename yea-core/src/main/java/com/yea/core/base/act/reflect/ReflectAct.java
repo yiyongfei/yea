@@ -84,6 +84,7 @@ public class ReflectAct extends AbstractTransactionAct {
 			method = target.getClass().getMethod(methodName);
 		}
 		
+		method.setAccessible(true);
 		return InvokerUtil.getInstance().newInvoker(method).invoke(target, messages);
 	}
 
