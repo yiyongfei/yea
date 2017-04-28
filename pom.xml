@@ -165,11 +165,6 @@
 			</dependency>
 			
 			<!-- Shiro支持 -->
-			<dependency>
-			    <groupId>org.apache.shiro</groupId>
-			    <artifactId>shiro-core</artifactId>
-			    <version>${shiro.version}</version>
-			</dependency>
 			<!-- Shiro与Spring的整合 -->
 			<dependency>
 			    <groupId>org.apache.shiro</groupId>
@@ -209,10 +204,6 @@
 		</dependencies>
 	</dependencyManagement>
 	
-    <dependencies>
-	
-    </dependencies>
-  
     <modules>
         <module>yea-netty</module>
         <module>yea-core</module>
