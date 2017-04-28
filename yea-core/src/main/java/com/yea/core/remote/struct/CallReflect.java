@@ -15,24 +15,23 @@
  */
 package com.yea.core.remote.struct;
 
-import com.yea.core.base.model.BaseModel;
-
-public class CallAct extends BaseModel {
+public class CallReflect extends CallAct {
 	private static final long serialVersionUID = 1L;
 	
-	private String actName;//服务端对应的Act定义BeanName，必须
-	private String callbackName;//本地对应回调用的ActBeanName，非必须，本地需要异步回调时设置
+	private String className;
+	private String methodName;
 	
-	public String getActName() {
-		return actName;
+	public String getClassName() {
+		return className;
 	}
-	public void setActName(String actName) {
-		this.actName = actName;
+	public void setClassName(String className) {
+		this.className = className;
 	}
-	public String getCallbackName() {
-		return callbackName;
+	public String getMethodName() {
+		return methodName;
 	}
-	public void setCallbackName(String callbackName) {
-		this.callbackName = callbackName;
+	public void setMethodName(String methodName) {
+		this.methodName = methodName;
 	}
+	
 }

@@ -31,6 +31,7 @@ import com.yea.core.remote.AbstractEndpoint;
 import com.yea.core.remote.constants.RemoteConstants;
 import com.yea.core.remote.observer.Observable;
 import com.yea.core.remote.struct.CallAct;
+import com.yea.core.remote.struct.CallReflect;
 import com.yea.core.remote.struct.Header;
 import com.yea.core.remote.struct.Message;
 import com.yea.remote.netty.client.promise.AwaitPromise;
@@ -92,6 +93,9 @@ public class RemoteClient implements BalancingNode {
         	actName = act.getActName();
         	header.getAttachment().put(NettyConstants.CALL_ACT, act.getActName());
             header.getAttachment().put(NettyConstants.CALLBACK_ACT, act.getCallbackName());
+            if(act instanceof CallReflect) {
+            	header.getAttachment().put(NettyConstants.CALL_REFLECT, act);
+            }
         } else {
         	if(messageType.value() == RemoteConstants.MessageType.SERVICE_REQ.value()) {
         		throw new Exception("发送服务请求时请提供对方系统的Act名");

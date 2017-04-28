@@ -22,6 +22,7 @@ package com.yea.remote.netty.constants;
  */
 public class NettyConstants {
     public static final String CALL_ACT = "call_act";
+    public static final String CALL_REFLECT = "call_reflect";
     public static final String CALLBACK_ACT = "callback_act";
     public static final String HEADER_DATE = "header_date";
     
