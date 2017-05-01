@@ -81,6 +81,7 @@ public class ServiceServerHandler extends AbstractServiceHandler implements Nett
 		@Override
 		protected void compute() {
 			// TODO Auto-generated method stub
+			Date currDate = new Date();
 			Message serviceResp = null;
             String actName = (String) message.getHeader().getAttachment().get(NettyConstants.CALL_ACT);
             AbstractAct<?> cloneAct;
@@ -109,17 +110,17 @@ public class ServiceServerHandler extends AbstractServiceHandler implements Nett
             	cloneAct.setMessages((Object[]) message.getBody());
             	cloneAct.fork();
             	Object result = cloneAct.join();
-                serviceResp = buildServiceResp(RemoteConstants.MessageResult.SUCCESS.value(), message.getHeader().getSessionID(), result, (String)message.getHeader().getAttachment().get(NettyConstants.CALLBACK_ACT));
+                serviceResp = buildServiceResp(RemoteConstants.MessageResult.SUCCESS.value(), message.getHeader().getSessionID(), (Date)message.getHeader().getAttachment().get(NettyConstants.HEADER_DATE), currDate, result, (String)message.getHeader().getAttachment().get(NettyConstants.CALLBACK_ACT));
             } catch (Exception ex) {
             	LOGGER.error("处理"+actName+"服务[标识:" + UUIDGenerator.restore(message.getHeader().getSessionID()) + "]时出现异常：", ex);
-                serviceResp = buildServiceResp(RemoteConstants.MessageResult.FAILURE.value(), message.getHeader().getSessionID(), ex, (String)message.getHeader().getAttachment().get(NettyConstants.CALLBACK_ACT));
+                serviceResp = buildServiceResp(RemoteConstants.MessageResult.FAILURE.value(), message.getHeader().getSessionID(), (Date)message.getHeader().getAttachment().get(NettyConstants.HEADER_DATE), currDate, ex, (String)message.getHeader().getAttachment().get(NettyConstants.CALLBACK_ACT));
             } finally {
             	cloneAct = null;
             }
             nettyContext.writeAndFlush(serviceResp);
 		}
 		
-	    private Message buildServiceResp(byte result, byte[] sessionID, Object body, String act) {
+	    private Message buildServiceResp(byte result, byte[] sessionID, Date reqDate, Date reqRecieveDate, Object body, String act) {
 	        Message message = new Message();
 	        Header header = new Header();
 	        header.setType(RemoteConstants.MessageType.SERVICE_RESP.value());
@@ -127,6 +128,8 @@ public class ServiceServerHandler extends AbstractServiceHandler implements Nett
 	        header.setResult(result);
 	        header.setAttachment(new HashMap<String, Object>());
 	        header.getAttachment().put(NettyConstants.CALL_ACT, act == null || act.trim().length() == 0 ? null : act);
+	        header.getAttachment().put(NettyConstants.REQUEST_DATE, reqDate);
+	        header.getAttachment().put(NettyConstants.REQUEST_RECIEVE_DATE, reqRecieveDate);
 	        header.getAttachment().put(NettyConstants.HEADER_DATE, new Date());
 	        message.setHeader(header);
 	        message.setBody(body);

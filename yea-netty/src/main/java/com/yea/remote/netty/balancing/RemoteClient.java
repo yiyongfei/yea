@@ -36,6 +36,7 @@ import com.yea.core.remote.struct.Header;
 import com.yea.core.remote.struct.Message;
 import com.yea.remote.netty.client.promise.AwaitPromise;
 import com.yea.remote.netty.constants.NettyConstants;
+import com.yea.remote.netty.exception.WriteRejectException;
 import com.yea.remote.netty.promise.NettyChannelPromise;
 
 import io.netty.channel.Channel;
@@ -66,7 +67,10 @@ public class RemoteClient implements BalancingNode {
     
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public <T> NettyChannelPromise<T> send(CallAct act, List<GenericFutureListener> listeners, RemoteConstants.MessageType messageType, byte[] sessionID, Object... messages) throws Exception {
-        AwaitPromise observer = new AwaitPromise(new DefaultChannelPromise(channel, GlobalEventExecutor.INSTANCE));
+		if (!this.channel.isWritable()) {
+			throw new WriteRejectException();
+		}
+    	AwaitPromise observer = new AwaitPromise(new DefaultChannelPromise(channel, GlobalEventExecutor.INSTANCE));
         if(listeners != null && listeners.size() > 0){
             for(GenericFutureListener listener : listeners){
             	observer.addListener(listener);

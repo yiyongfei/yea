@@ -45,6 +45,7 @@ import com.yea.core.remote.struct.Message;
 import com.yea.core.util.NetworkUtils;
 import com.yea.remote.netty.balancing.RemoteClient;
 import com.yea.remote.netty.balancing.RemoteClientLocator;
+import com.yea.remote.netty.exception.WriteRejectException;
 import com.yea.remote.netty.handle.NettyChannelHandler;
 import com.yea.remote.netty.promise.NettyChannelPromise;
 
@@ -57,6 +58,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.DefaultMessageSizeEstimator;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
@@ -180,8 +182,14 @@ public class NettyServer extends AbstractEndpoint {
         	}
         	byte[] sessionID = UUIDGenerator.generate();
         	RemoteClient client = remoteClientLocator.getClient(sessionID);
-        	NettyChannelPromise<T> future = client.send(act, listeners, RemoteConstants.MessageType.SERVICE_REQ, sessionID, messages);
-            return future;
+        	try {
+        		NettyChannelPromise<T> future = client.send(act, listeners, RemoteConstants.MessageType.SERVICE_REQ, sessionID, messages);
+                return future;
+        	} catch (WriteRejectException ex) {
+        		/*已达写高位，稍候再重试*/
+        		Thread.sleep(50);
+        		return send(act, listeners, messages);
+        	}
         }
         
         String useStatistics() {
@@ -258,7 +266,7 @@ public class NettyServer extends AbstractEndpoint {
         	try{
         		// 配置服务端的NIO线程组
                 bossGroup = new NioEventLoopGroup();
-                workerGroup = new NioEventLoopGroup();
+                workerGroup = new NioEventLoopGroup((int) Math.floor(Runtime.getRuntime().availableProcessors() * 1.5));//默认是CPU核数 * 2
 
                 ServerBootstrap bootstrap = new ServerBootstrap();
                 /**
@@ -269,12 +277,28 @@ public class NettyServer extends AbstractEndpoint {
                  * 
                  * backlog指定了内核为此套接口排队的最大连接个数，对于给定的监听套接口，内核要维护两个队列，未链接队列和已连接队列，根据TCP三路握手过程中三个分节来分隔这两个队列。服务器处于listen状态时收到客户端syn 分节(connect)时在未完成队列中创建一个新的条目，然后用三路握手的第二个分节即服务器的syn 响应及对客户端syn的ack,此条目在第三个分节到达前(客户端对服务器syn的ack)一直保留在未完成连接队列中，如果三路握手完成，该条目将从未完成连接队列搬到已完成连接队列尾部。当进程调用accept时，从已完成队列中的头部取出一个条目给进程，当已完成队列为空时进程将睡眠，直到有条目在已完成连接队列中才唤醒。backlog被规定为两个队列总和的最大值，大多数实现默认值为5，但在高并发web服务器中此值显然不够，lighttpd中此值达到128*8 。需要设置此值更大一些的原因是未完成连接队列的长度可能因为客户端SYN的到达及等待三路握手第三个分节的到达延时而增大。Netty默认的backlog为100，当然，用户可以修改默认值，用户需要根据实际场景和网络状况进行灵活设置。
                  */
-                bootstrap.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class).option(ChannelOption.SO_BACKLOG, 256).option(ChannelOption.SO_REUSEADDR, true)
-                    .option(ChannelOption.SO_RCVBUF, 128 * 1024).option(ChannelOption.SO_SNDBUF, 128 * 1024)
-                    .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, 128 * 1024).option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 64 * 1024)
-                    .option(ChannelOption.TCP_NODELAY, true).option(ChannelOption.SO_KEEPALIVE, true).childOption(ChannelOption.SO_KEEPALIVE, true)
-                    .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT).childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
-                    .option(ChannelOption.RCVBUF_ALLOCATOR, AdaptiveRecvByteBufAllocator.DEFAULT).handler(new LoggingHandler(LogLevel.INFO))
+                //option()是提供给boss线程。childOption()是提供给由父管道ServerChannel接收到的连接，也就是worker线程
+                bootstrap.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class)
+                    /*通用参数*/
+                    .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30 * 1000)//连接超时毫秒数，默认值30000毫秒
+                    .option(ChannelOption.MAX_MESSAGES_PER_READ, 16)//一次Loop读取的最大消息数，对于ServerChannel或者NioByteChannel，默认值为16，其他Channel默认值为1
+                    .option(ChannelOption.WRITE_SPIN_COUNT, 16)//一个Loop写操作执行的最大次数，默认值为16。对于大数据量的写操作至多进行16次，如果16次仍没有全部写完数据，此时会提交一个新的写任务给EventLoop，任务将在下次调度继续执行
+                    .option(ChannelOption.AUTO_READ, true)//自动读取，默认值为True。读操作，需要调用channel.read()设置关心的I/O事件为OP_READ，这样若有数据到达才能读取以供用户处理。该值为True时，每次读操作完毕后会自动调用channel.read()，从而有数据到达便能读取；否则，需要用户手动调用channel.read()
+                    .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, 64 * 1024)//写高水位标记，默认值64KB。如果Netty的写缓冲区中的字节超过该值，Channel的isWritable()返回False
+                    .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 32 * 1024)//写低水位标记，默认值32KB。当Netty的写缓冲区中的字节超过高水位之后若下降到低水位，则Channel的isWritable()返回True
+                    .option(ChannelOption.MESSAGE_SIZE_ESTIMATOR, DefaultMessageSizeEstimator.DEFAULT)//消息大小估算器，默认为DefaultMessageSizeEstimator.DEFAULT。估算ByteBuf、ByteBufHolder和FileRegion的大小，其中ByteBuf和ByteBufHolder为实际大小，FileRegion估算值为0。该值估算的字节数在计算水位时使用，FileRegion为0可知FileRegion不影响高低水位。
+                    .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT).childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)//ByteBuf的分配器，默认值为ByteBufAllocator.DEFAULT，4.0版本为UnpooledByteBufAllocator，4.1版本为PooledByteBufAllocator
+                    .option(ChannelOption.RCVBUF_ALLOCATOR, AdaptiveRecvByteBufAllocator.DEFAULT).childOption(ChannelOption.RCVBUF_ALLOCATOR, AdaptiveRecvByteBufAllocator.DEFAULT)//用于Channel分配接受Buffer的分配器，默认值为AdaptiveRecvByteBufAllocator.DEFAULT，是一个自适应的接受缓冲区分配器，能根据接受到的数据自动调节大小。可选值为FixedRecvByteBufAllocator，固定大小的接受缓冲区分配器。
+                    /*ServerSocketChannel参数*/
+                    .childOption(ChannelOption.SO_BACKLOG, 256)//服务端接受连接的队列长度，如果队列已满，客户端连接将被拒绝。默认值，Windows为200，其他为128
+                    /*SocketChannel参数*/
+                    .option(ChannelOption.SO_REUSEADDR, true)//地址复用，默认值False。有四种情况可以使用：(1)当有一个有相同本地地址和端口的socket1处于TIME_WAIT状态时，而你希望启动的程序的socket2要占用该地址和端口，比如重启服务且保持先前端口。(2).有多块网卡或用IP Alias技术的机器在同一端口启动多个进程，但每个进程绑定的本地IP地址不能相同。(3).单个进程绑定相同的端口到多个socket上，但每个socket绑定的ip地址不同。(4).完全相同的地址和端口的重复绑定。但这只用于UDP的多播，不用于TCP。
+                    .childOption(ChannelOption.SO_RCVBUF, 128 * 1024)//TCP数据接收缓冲区大小。linux操作系统可使用命令：cat /proc/sys/net/ipv4/tcp_rmem查询其大小。一般情况下，该值可由用户在任意时刻设置，但当设置值超过64KB时，需要在连接到远端之前设置。
+                    .childOption(ChannelOption.SO_SNDBUF, 64 * 1024)//TCP数据发送缓冲区大小。linux操作系统可使用命令：cat /proc/sys/net/ipv4/tcp_smem查询其大小
+                    .option(ChannelOption.TCP_NODELAY, true)//立即发送数据，默认值为True。该值设置Nagle算法的启用，该算法将小的碎片数据连接成更大的报文来最小化所发送的报文的数量，如果需要发送一些较小的报文，则需要禁用该算法。
+                    .option(ChannelOption.SO_KEEPALIVE, true).childOption(ChannelOption.SO_KEEPALIVE, true)//连接保活，默认值为False。启用该功能时，TCP会主动探测空闲连接的有效性。需注意：默认的心跳间隔是7200s
+                    .option(ChannelOption.ALLOW_HALF_CLOSURE, false)//连接远端关闭时本地端是否关闭，默认值为False。值为False时，连接自动关闭；为True时，触发ChannelInboundHandler的userEventTriggered()方法，事件为ChannelInputShutdownEvent。
+                    .handler(new LoggingHandler(LogLevel.INFO))
                     .childHandler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         public void initChannel(SocketChannel ch) throws Exception {

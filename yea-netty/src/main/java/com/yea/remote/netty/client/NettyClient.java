@@ -47,6 +47,7 @@ import com.yea.core.remote.struct.Message;
 import com.yea.core.util.NetworkUtils;
 import com.yea.remote.netty.balancing.RemoteClient;
 import com.yea.remote.netty.balancing.RemoteClientLocator;
+import com.yea.remote.netty.exception.WriteRejectException;
 import com.yea.remote.netty.handle.NettyChannelHandler;
 import com.yea.remote.netty.promise.NettyChannelPromise;
 
@@ -169,8 +170,14 @@ public class NettyClient extends AbstractEndpoint {
     	}
     	byte[] sessionID = UUIDGenerator.generate();
     	RemoteClient client = remoteClientLocator.getClient(sessionID);
-    	NettyChannelPromise<T> future = client.send(act, listeners, RemoteConstants.MessageType.SERVICE_REQ, sessionID, messages);
-        return future;
+    	try {
+    		NettyChannelPromise<T> future = client.send(act, listeners, RemoteConstants.MessageType.SERVICE_REQ, sessionID, messages);
+            return future;
+    	} catch (WriteRejectException ex) {
+    		/*已达写高位，稍候再重试*/
+    		Thread.sleep(50);
+    		return send(act, listeners, messages);
+    	}
     }
     
     public int remoteConnects() {
@@ -259,10 +266,10 @@ public class NettyClient extends AbstractEndpoint {
 				}
 				// 连接不成功时，判断连接是否有超时，若超时抛出异常，否则等候2秒后重连
 				if (!super.isConnectSuccess()) {
-					TimeUnit.MILLISECONDS.sleep(10 * 1000);
-
+					TimeUnit.MILLISECONDS.sleep(5 * 1000);
 					if (!super.isConnectSuccess()) {
 						LOGGER.info("连接服务器（" + remoteAddress + "）不成功，准备重新连接！");
+						TimeUnit.MILLISECONDS.sleep(15 * 1000);
 						if (!this.isStop()) {
 							connect(socketAddress);
 						}
@@ -322,7 +329,7 @@ public class NettyClient extends AbstractEndpoint {
 				return;
 			}
 			try {
-				group = new NioEventLoopGroup();
+				group = new NioEventLoopGroup((int) Math.floor(Runtime.getRuntime().availableProcessors() * 1.5));
 				// 配置客户端NIO线程组
 				Bootstrap bootstrap = new Bootstrap();
 				/**
@@ -334,9 +341,9 @@ public class NettyClient extends AbstractEndpoint {
 				 */
 				bootstrap.group(group).channel(NioSocketChannel.class).option(ChannelOption.TCP_NODELAY, true)
 						.option(ChannelOption.SO_KEEPALIVE, true).option(ChannelOption.SO_REUSEADDR, true)
-						.option(ChannelOption.SO_RCVBUF, 128 * 1024).option(ChannelOption.SO_SNDBUF, 128 * 1024)
-						.option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, 128 * 1024)
+						.option(ChannelOption.SO_RCVBUF, 128 * 1024).option(ChannelOption.SO_SNDBUF, 64 * 1024)
 						.option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, 64 * 1024)
+						.option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 32 * 1024)
 						.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
 						.option(ChannelOption.RCVBUF_ALLOCATOR, AdaptiveRecvByteBufAllocator.DEFAULT)
 						.handler(new LoggingHandler(LogLevel.INFO)).handler(new ChannelInitializer<SocketChannel>() {

@@ -50,7 +50,8 @@ public class ServiceClientHandler extends AbstractServiceHandler implements Nett
 	protected void execute(ChannelHandlerContext ctx, Message message) throws Exception {
 		// TODO Auto-generated method stub
 		if (message.getHeader().getType() == RemoteConstants.MessageType.SERVICE_RESP.value()) {
-            LOGGER.info(ctx.channel().localAddress() + "从" + ctx.channel().remoteAddress() + "接收到响应" + ",共用时：" + (new Date().getTime() - ((Date)message.getHeader().getAttachment().get(NettyConstants.HEADER_DATE)).getTime()));
+            LOGGER.info(ctx.channel().localAddress() + "从" + ctx.channel().remoteAddress() + "接收到响应" + ", 共用时：" + (new Date().getTime() - ((Date)message.getHeader().getAttachment().get(NettyConstants.REQUEST_DATE)).getTime()) + "，其中：请求用时：" + (((Date)message.getHeader().getAttachment().get(NettyConstants.REQUEST_RECIEVE_DATE)).getTime() - ((Date)message.getHeader().getAttachment().get(NettyConstants.REQUEST_DATE)).getTime()) + "，处理用时：" + (((Date)message.getHeader().getAttachment().get(NettyConstants.HEADER_DATE)).getTime() - ((Date)message.getHeader().getAttachment().get(NettyConstants.REQUEST_RECIEVE_DATE)).getTime()) + "，响应用时：" + (new Date().getTime() - ((Date)message.getHeader().getAttachment().get(NettyConstants.HEADER_DATE)).getTime()));
+            
             if(message.getHeader().getAttachment().get(NettyConstants.CALL_ACT) != null) {
 				pool.execute(new InnerTask(this.getApplicationContext(), message));
             }

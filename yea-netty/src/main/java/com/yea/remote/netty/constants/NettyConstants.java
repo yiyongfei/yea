@@ -25,6 +25,8 @@ public class NettyConstants {
     public static final String CALL_REFLECT = "call_reflect";
     public static final String CALLBACK_ACT = "callback_act";
     public static final String HEADER_DATE = "header_date";
+    public static final String REQUEST_DATE = "req_date";
+    public static final String REQUEST_RECIEVE_DATE = "req_rec_date";
     
     
     public enum ThreadPool {
