@@ -3,7 +3,7 @@
     <parent>
 	    <groupId>com.yea</groupId>
 	    <artifactId>yea</artifactId>
-	    <version>0.0.1</version>
+	    <version>0.0.2</version>
     </parent>
     <!-- 该组件提供服务支持（生成工具，Shiro的SQL执行） -->
     <artifactId>yea-achieve</artifactId>

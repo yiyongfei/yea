@@ -44,7 +44,7 @@ public class EhcacheInstance {
 		/*Netty缓冲区缓存*/
 		CacheConfigurationBuilder<Serializable, Serializable> nettyConfiguration = CacheConfigurationBuilder
 				.newCacheConfigurationBuilder(Serializable.class, Serializable.class,
-						ResourcePoolsBuilder.newResourcePoolsBuilder().heap(1, MemoryUnit.MB))
+						ResourcePoolsBuilder.newResourcePoolsBuilder().heap(36, MemoryUnit.MB))
 				.withExpiry(Expirations.timeToLiveExpiration(Duration.of(60, TimeUnit.SECONDS)));
 		
 		cacheManager.createCache(NETTY_CACHE, nettyConfiguration);

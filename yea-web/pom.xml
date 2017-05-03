@@ -3,9 +3,10 @@
     <parent>
         <groupId>com.yea</groupId>
         <artifactId>yea</artifactId>
-        <version>0.0.1</version>
+        <version>0.0.2</version>
     </parent>
     <artifactId>yea-web</artifactId>
+    
     <dependencies>
 	    <dependency>
 		    <groupId>javax.servlet</groupId>

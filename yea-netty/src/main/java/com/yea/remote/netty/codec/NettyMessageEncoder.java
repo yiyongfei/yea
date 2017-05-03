@@ -27,7 +27,7 @@ import org.springframework.context.ApplicationContext;
 
 import com.yea.core.remote.struct.Message;
 import com.yea.core.serializer.ISerializer;
-import com.yea.core.serializer.fst.Serializer;
+import com.yea.core.serializer.pool.SerializePool;
 import com.yea.remote.netty.handle.NettyChannelHandler;
 
 /**
@@ -37,10 +37,10 @@ import com.yea.remote.netty.handle.NettyChannelHandler;
  */
 public final class NettyMessageEncoder extends MessageToByteEncoder<Message> implements NettyChannelHandler {
 	private static final byte[] LENGTH_PLACEHOLDER = new byte[4];
-    private ISerializer serializer;
+	private SerializePool serializePool;
     
     public NettyMessageEncoder() {
-        serializer = new Serializer();
+    	serializePool = new SerializePool();
     }
 
     @Override
@@ -48,42 +48,47 @@ public final class NettyMessageEncoder extends MessageToByteEncoder<Message> imp
     	if (msg == null || msg.getHeader() == null) {
             throw new Exception("The encode message is null");
         }
-        sendBuf.writeInt((msg.getHeader().getCrcCode()));//长度4字节
-        sendBuf.writeInt((msg.getHeader().getLength()));//长度4字节，存放Header+Body的长度，其中Header固定为18字节
-        sendBuf.writeBytes((msg.getHeader().getSessionID()));//长度16字节
-        sendBuf.writeByte((msg.getHeader().getType()));//长度1字节
-        sendBuf.writeByte((msg.getHeader().getPriority()));//长度1字节
-        sendBuf.writeByte((msg.getHeader().getResult()));//长度1字节
-        
-        if (msg.getHeader().getAttachment() != null) {
-            sendBuf.writeInt((msg.getHeader().getAttachment().size()));//长度4字节，附属内容的数目
-            byte[] keyArray = null;
-            byte[] valueArray = null;
-            for (Map.Entry<String, Object> param : msg.getHeader().getAttachment().entrySet()) {
-                keyArray = param.getKey().getBytes("ISO-8859-1");
-                sendBuf.writeInt(keyArray.length);
-                sendBuf.writeBytes(keyArray);
+    	ISerializer serializer = serializePool.borrow();
+    	try{
+    		sendBuf.writeInt((msg.getHeader().getCrcCode()));//长度4字节
+            sendBuf.writeInt((msg.getHeader().getLength()));//长度4字节，存放Header+Body的长度，其中Header固定为18字节
+            sendBuf.writeBytes((msg.getHeader().getSessionID()));//长度16字节
+            sendBuf.writeByte((msg.getHeader().getType()));//长度1字节
+            sendBuf.writeByte((msg.getHeader().getPriority()));//长度1字节
+            sendBuf.writeByte((msg.getHeader().getResult()));//长度1字节
+            
+            if (msg.getHeader().getAttachment() != null) {
+                sendBuf.writeInt((msg.getHeader().getAttachment().size()));//长度4字节，附属内容的数目
+                byte[] keyArray = null;
+                byte[] valueArray = null;
+                for (Map.Entry<String, Object> param : msg.getHeader().getAttachment().entrySet()) {
+                    keyArray = param.getKey().getBytes("ISO-8859-1");
+                    sendBuf.writeInt(keyArray.length);
+                    sendBuf.writeBytes(keyArray);
 
-                valueArray = serializer.serialize(param.getValue());
-                sendBuf.writeInt(valueArray.length);
-                sendBuf.writeBytes(valueArray);
+                    valueArray = serializer.serialize(param.getValue());
+                    sendBuf.writeInt(valueArray.length);
+                    sendBuf.writeBytes(valueArray);
+                }
+                keyArray = null;
+                valueArray = null;
+            } else {
+                sendBuf.writeInt(0);//长度4字节，附属内容的数目为0
             }
-            keyArray = null;
-            valueArray = null;
-        } else {
-            sendBuf.writeInt(0);//长度4字节，附属内容的数目为0
-        }
-        
-        if (msg.getBody() != null) {
-            byte[] objArray = serializer.serialize(msg.getBody());
-            int lengthPos = sendBuf.writerIndex();
-            sendBuf.writeBytes(LENGTH_PLACEHOLDER);//长度4字节，存放Body的长度
-            sendBuf.writeBytes(objArray);
-            sendBuf.setInt(lengthPos, sendBuf.writerIndex() - lengthPos - 4);//设置Body长度
-        } else {
-            sendBuf.writeInt(0);
-        }
-        sendBuf.setInt(4, sendBuf.readableBytes() - 8);//设置总长度，Header+Body的长度
+            
+            if (msg.getBody() != null) {
+                byte[] objArray = serializer.serialize(msg.getBody());
+                int lengthPos = sendBuf.writerIndex();
+                sendBuf.writeBytes(LENGTH_PLACEHOLDER);//长度4字节，存放Body的长度
+                sendBuf.writeBytes(objArray);
+                sendBuf.setInt(lengthPos, sendBuf.writerIndex() - lengthPos - 4);//设置Body长度
+            } else {
+                sendBuf.writeInt(0);
+            }
+            sendBuf.setInt(4, sendBuf.readableBytes() - 8);//设置总长度，Header+Body的长度
+    	} finally {
+    		serializePool.restore(serializer);
+    	}
     }
     
     public ChannelHandler clone() throws CloneNotSupportedException {

@@ -30,7 +30,7 @@ import com.yea.core.remote.constants.RemoteConstants;
 import com.yea.core.remote.struct.Header;
 import com.yea.core.remote.struct.Message;
 import com.yea.core.serializer.ISerializer;
-import com.yea.core.serializer.fst.Serializer;
+import com.yea.core.serializer.pool.SerializePool;
 import com.yea.remote.netty.handle.NettyChannelHandler;
 
 /**
@@ -39,11 +39,11 @@ import com.yea.remote.netty.handle.NettyChannelHandler;
  * 
  */
 public class NettyMessageDecoder extends LengthFieldBasedFrameDecoder implements NettyChannelHandler {
-    private ISerializer serializer;
-
+	private SerializePool serializePool;
+	
     public NettyMessageDecoder() {
         super(1024*1024, 4, 4, 0, 0);
-        serializer = new Serializer();
+        serializePool = new SerializePool();
     }
 
     @Override
@@ -52,7 +52,7 @@ public class NettyMessageDecoder extends LengthFieldBasedFrameDecoder implements
         if (frame == null) {
             return null;
         }
-        
+        ISerializer serializer = serializePool.borrow();
         try {
             Message message = new Message();
             byte[] sessionID = new byte[16];
@@ -108,9 +108,9 @@ public class NettyMessageDecoder extends LengthFieldBasedFrameDecoder implements
 
             return message;
         } finally {
+        	serializePool.restore(serializer);
             frame.release();
         }
-        
     }
     
     public ChannelHandler clone() throws CloneNotSupportedException {
