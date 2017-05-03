@@ -26,6 +26,8 @@ import com.yea.core.remote.exception.RemoteException;
 import com.yea.core.remote.observer.Observable;
 import com.yea.core.remote.observer.Observer;
 import com.yea.core.remote.struct.Header;
+import com.yea.remote.netty.balancing.RemoteClient;
+import com.yea.remote.netty.balancing.RemoteClientLocator;
 import com.yea.remote.netty.promise.NettyChannelPromise;
 
 import io.netty.channel.Channel;
@@ -89,7 +91,12 @@ public class AwaitPromise<T> implements NettyChannelPromise<T>, Observer<T> {
                         }
                         long endTime = new Date().getTime();
                         if(timeout > 0L && (endTime - startTime > timeout)) {
-                            throw new RemoteException(YeaErrorMessage.ERR_FOUNDATION, RemoteConstants.ExceptionType.TIMEOUT.value() ,"获取数据超时！", null);
+                        	//处理速度达到慢的限制，降低慢权重
+            				RemoteClient client = RemoteClientLocator.getRemoteClient(this.promise.channel());
+            				if (client != null) {
+            					client.slowdown();
+            				}
+                            throw new RemoteException(YeaErrorMessage.ERR_FOUNDATION, RemoteConstants.ExceptionType.TIMEOUT.value() , promise.channel() + "获取数据超时！", null);
                         }
                     }
                     if (this.isSuccess) {
@@ -111,7 +118,11 @@ public class AwaitPromise<T> implements NettyChannelPromise<T>, Observer<T> {
             TimeUnit.MILLISECONDS.sleep(50);
             long endTime = new Date().getTime();
             if(timeout > 0L && (endTime - startTime > timeout)) {
-                throw new RemoteException(YeaErrorMessage.ERR_FOUNDATION, RemoteConstants.ExceptionType.TIMEOUT.value() ,"获取数据超时！", null);
+            	RemoteClient client = RemoteClientLocator.getRemoteClient(this.promise.channel());
+				if (client != null) {
+					client.slowdown();
+				}
+                throw new RemoteException(YeaErrorMessage.ERR_FOUNDATION, RemoteConstants.ExceptionType.TIMEOUT.value() , promise.channel() + "获取数据超时！", null);
             }
             return awaitObject(startTime, timeout);
         }

@@ -52,17 +52,37 @@ import io.netty.util.concurrent.GlobalEventExecutor;
  */
 public class RemoteClient implements BalancingNode {
 	private static final Logger LOGGER = LoggerFactory.getLogger(RemoteClient.class);
+	public final static long SLOW_LIMIT = 20 * 100;
     Channel channel = null;
     AbstractEndpoint endpoint = null;
+    private double slowWeight;
+    private Date slowdownTime;
 
 	//客户端所连接的远程服务器地址
     SocketAddress remoteAddress;
-    
     
     public RemoteClient(Channel channel, AbstractEndpoint endpoint){
     	this.channel = channel;
     	this.endpoint = endpoint;
     	this.remoteAddress = channel.remoteAddress();
+    	this.slowWeight = 10;
+    	this.slowdownTime = null;
+    }
+    
+    public void slowdown() {
+    	this.slowWeight = this.slowWeight * 0.99;
+    	this.slowdownTime = new Date();
+    }
+    
+    public boolean isSlowClient() {
+    	if(this.slowdownTime != null) {
+    		if(new Date().getTime() - this.slowdownTime.getTime() > (9 * 1000)) {
+    			this.slowWeight = 10;
+    			this.slowdownTime = null;
+    			return false;
+    		}
+    	}
+    	return this.slowWeight < 6 ? true : false;
     }
     
     @SuppressWarnings({ "rawtypes", "unchecked" })
@@ -108,8 +128,7 @@ public class RemoteClient implements BalancingNode {
         header.getAttachment().put(NettyConstants.HEADER_DATE, new Date());
         nettyMessage.setHeader(header);
         nettyMessage.setBody(messages);
-        channel.pipeline().write(nettyMessage, observer);
-        channel.pipeline().flush();
+        channel.writeAndFlush(nettyMessage, observer);
         
         LOGGER.info(endpoint.getHost() + ":" + endpoint.getPort() + "将向远程节点" + remoteAddress + "请求" + actName + "服务[标识:" + UUIDGenerator.restore(sessionID) + "]！");
         return observer;
@@ -123,15 +142,21 @@ public class RemoteClient implements BalancingNode {
         return remoteAddress;
     }
 
-    public String toString(){
-    	return channel.toString();
-    }
-    
     public Channel getChannel() {
 		return channel;
 	}
     
     public AbstractEndpoint getEndpoint() {
 		return endpoint;
+	}
+    
+    @Override
+    public String toString(){
+    	return channel.toString();
+    }
+
+    @Override
+	public int hashCode() {
+		return channel.toString().hashCode();
 	}
 }

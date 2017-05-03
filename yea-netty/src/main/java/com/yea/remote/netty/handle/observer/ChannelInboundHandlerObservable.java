@@ -20,6 +20,8 @@ import java.util.Map;
 import java.util.Vector;
 
 import org.ehcache.Cache;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.netty.channel.ChannelInboundHandlerAdapter;
 
@@ -34,6 +36,7 @@ import com.yea.core.remote.struct.Header;
  * @author yiyongfei
  */
 public class ChannelInboundHandlerObservable extends ChannelInboundHandlerAdapter implements Observable {
+	private static final Logger LOGGER = LoggerFactory.getLogger(ChannelInboundHandlerObservable.class);
     @SuppressWarnings("unchecked")
 	protected Cache<String, Vector<Observer<?>>> cacheObserver = EhcacheInstance.getCacheInstance(EhcacheInstance.NETTY_CACHE);
     private Map<String, Vector<Observer<?>>> mapObserver;
@@ -150,7 +153,12 @@ public class ChannelInboundHandlerObservable extends ChannelInboundHandlerAdapte
              */
             
         	if (cacheObserver != null) {
-        		arrLocal = ((Vector<Observer<?>>)cacheObserver.get(toString(sessionID))).toArray();
+        		try {
+        			arrLocal = ((Vector<Observer<?>>)cacheObserver.get(toString(sessionID))).toArray();
+        		} catch (Exception ex) {
+        			LOGGER.error("更新["+toString(sessionID)+"]时出现异常", ex);
+        			throw ex;
+        		}
         	} else {
         		arrLocal = mapObserver.get(toString(sessionID)).toArray();
         	}

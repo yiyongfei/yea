@@ -18,11 +18,12 @@ package com.yea.core.balancing.hash;
 import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -33,8 +34,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  */
 public final class KetamaNodeLocator implements NodeLocator {
 	private ReadWriteLock lock = new ReentrantReadWriteLock();
-    private volatile TreeMap<Long, BalancingNode> ketamaNodes;
-    private volatile Collection<BalancingNode> allNodes;
+    private TreeMap<Long, BalancingNode> ketamaNodes;
+    private Collection<BalancingNode> allNodes;
 
     private final HashAlgorithm hashAlg;
     private final KetamaNodeLocatorConfiguration config;
@@ -68,18 +69,11 @@ public final class KetamaNodeLocator implements NodeLocator {
      */
     public KetamaNodeLocator(HashAlgorithm alg, KetamaNodeLocatorConfiguration conf) {
         super();
-        allNodes = new CopyOnWriteArrayList<BalancingNode>();
+        allNodes = Collections.synchronizedSet(new HashSet<BalancingNode>());
         hashAlg = alg;
         config = conf;
     }
 
-    private KetamaNodeLocator(TreeMap<Long, BalancingNode> smn, Collection<BalancingNode> an, HashAlgorithm alg, KetamaNodeLocatorConfiguration conf) {
-        super();
-        ketamaNodes = smn;
-        allNodes = an;
-        hashAlg = alg;
-        config = conf;
-    }
 
     public Collection<BalancingNode> getAll() {
         return allNodes;
@@ -134,6 +128,14 @@ public final class KetamaNodeLocator implements NodeLocator {
         }
 
         return new KetamaNodeLocator(smn, an, hashAlg, config);
+    }
+
+    private KetamaNodeLocator(TreeMap<Long, BalancingNode> smn, Collection<BalancingNode> an, HashAlgorithm alg, KetamaNodeLocatorConfiguration conf) {
+        super();
+        ketamaNodes = smn;
+        allNodes = an;
+        hashAlg = alg;
+        config = conf;
     }
 
     public void addLocator(BalancingNode node) {

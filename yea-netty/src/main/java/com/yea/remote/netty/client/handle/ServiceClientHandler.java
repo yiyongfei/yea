@@ -27,6 +27,8 @@ import com.yea.core.base.act.AbstractAct;
 import com.yea.core.exception.YeaException;
 import com.yea.core.remote.constants.RemoteConstants;
 import com.yea.core.remote.struct.Message;
+import com.yea.remote.netty.balancing.RemoteClient;
+import com.yea.remote.netty.balancing.RemoteClientLocator;
 import com.yea.remote.netty.constants.NettyConstants;
 import com.yea.remote.netty.handle.AbstractServiceHandler;
 import com.yea.remote.netty.handle.NettyChannelHandler;
@@ -50,7 +52,15 @@ public class ServiceClientHandler extends AbstractServiceHandler implements Nett
 	protected void execute(ChannelHandlerContext ctx, Message message) throws Exception {
 		// TODO Auto-generated method stub
 		if (message.getHeader().getType() == RemoteConstants.MessageType.SERVICE_RESP.value()) {
-            LOGGER.info(ctx.channel().localAddress() + "从" + ctx.channel().remoteAddress() + "接收到响应" + ", 共用时：" + (new Date().getTime() - ((Date)message.getHeader().getAttachment().get(NettyConstants.REQUEST_DATE)).getTime()) + "，其中：请求用时：" + (((Date)message.getHeader().getAttachment().get(NettyConstants.REQUEST_RECIEVE_DATE)).getTime() - ((Date)message.getHeader().getAttachment().get(NettyConstants.REQUEST_DATE)).getTime()) + "，处理用时：" + (((Date)message.getHeader().getAttachment().get(NettyConstants.HEADER_DATE)).getTime() - ((Date)message.getHeader().getAttachment().get(NettyConstants.REQUEST_RECIEVE_DATE)).getTime()) + "，响应用时：" + (new Date().getTime() - ((Date)message.getHeader().getAttachment().get(NettyConstants.HEADER_DATE)).getTime()));
+			long times = new Date().getTime() - ((Date)message.getHeader().getAttachment().get(NettyConstants.REQUEST_DATE)).getTime();
+            LOGGER.info(ctx.channel().localAddress() + "从" + ctx.channel().remoteAddress() + "接收到响应" + ", 共用时：" + (times) + "，其中：请求用时：" + (((Date)message.getHeader().getAttachment().get(NettyConstants.REQUEST_RECIEVE_DATE)).getTime() - ((Date)message.getHeader().getAttachment().get(NettyConstants.REQUEST_DATE)).getTime()) + "，处理用时：" + (((Date)message.getHeader().getAttachment().get(NettyConstants.HEADER_DATE)).getTime() - ((Date)message.getHeader().getAttachment().get(NettyConstants.REQUEST_RECIEVE_DATE)).getTime()) + "，响应用时：" + (new Date().getTime() - ((Date)message.getHeader().getAttachment().get(NettyConstants.HEADER_DATE)).getTime()));
+			if (times > RemoteClient.SLOW_LIMIT) {
+				//处理速度达到慢的限制，降低慢权重
+				RemoteClient client = RemoteClientLocator.getRemoteClient(ctx.channel());
+				if (client != null) {
+					client.slowdown();
+				}
+			}
             
             if(message.getHeader().getAttachment().get(NettyConstants.CALL_ACT) != null) {
 				pool.execute(new InnerTask(this.getApplicationContext(), message));
