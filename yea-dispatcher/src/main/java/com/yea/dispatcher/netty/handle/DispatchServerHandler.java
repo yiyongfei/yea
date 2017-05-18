@@ -131,7 +131,7 @@ public class DispatchServerHandler extends ChannelInboundHandlerAdapter implemen
         header.setSessionID(sessionID);
         header.setResult(RemoteConstants.MessageResult.SUCCESS.value());
         header.setAttachment(new HashMap<String, Object>());
-        header.getAttachment().put(NettyConstants.HEADER_DATE, new Date());
+        header.getAttachment().put(NettyConstants.MessageHeaderAttachment.HEADER_DATE.value(), new Date());
         message.setHeader(header);
         message.setBody(body);
         return message;

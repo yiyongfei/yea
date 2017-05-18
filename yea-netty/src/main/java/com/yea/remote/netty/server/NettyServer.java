@@ -30,12 +30,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
 
-import com.yea.core.balancing.hash.BalancingNode;
 import com.yea.core.base.act.AbstractAct;
 import com.yea.core.base.id.UUIDGenerator;
 import com.yea.core.exception.constants.YeaErrorMessage;
-import com.yea.core.remote.AbstractEndpoint;
+import com.yea.core.loadbalancer.AbstractBalancingNode;
+import com.yea.core.loadbalancer.BalancingNode;
 import com.yea.core.remote.AbstractServer;
+import com.yea.core.remote.client.ClientRegister;
 import com.yea.core.remote.constants.RemoteConstants;
 import com.yea.core.remote.exception.RemoteException;
 import com.yea.core.remote.promise.Promise;
@@ -43,11 +44,9 @@ import com.yea.core.remote.struct.CallAct;
 import com.yea.core.remote.struct.Header;
 import com.yea.core.remote.struct.Message;
 import com.yea.core.util.NetworkUtils;
+import com.yea.remote.netty.AbstractNettyEndpoint;
 import com.yea.remote.netty.balancing.RemoteClient;
-import com.yea.remote.netty.balancing.RemoteClientLocator;
-import com.yea.remote.netty.exception.WriteRejectException;
 import com.yea.remote.netty.handle.NettyChannelHandler;
-import com.yea.remote.netty.promise.NettyChannelPromise;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -65,19 +64,21 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.util.concurrent.GenericFutureListener;
 
 /**
  * 服务端启动类
  * @author yiyongfei
  * 
  */
-public class NettyServer extends AbstractEndpoint {
+public class NettyServer extends AbstractNettyEndpoint {
 	private static final Logger LOGGER = LoggerFactory.getLogger(NettyServer.class);
     private List<Map<String, ChannelHandler>> listHandler = null;
     private Server server;
     
     public void bind() throws Throwable {
+		if(loadBalancer == null) {
+			initLoadBalancer();
+		}
     	server = new Server();
     	if(StringUtils.isEmpty(this.getHost())){
     		this.setHost(NetworkUtils.getIp());
@@ -88,23 +89,6 @@ public class NettyServer extends AbstractEndpoint {
     	server.setDispatcher(this.getDispatcher());
     	server.setApplicationContext(this.getApplicationContext());
     	server.bind();
-    }
-
-    public <T> NettyChannelPromise<T> send(CallAct act, Object... messages) throws Throwable {
-        return server.send(act, null, messages);
-    }
-    
-    @SuppressWarnings("rawtypes")
-    public <T> NettyChannelPromise<T> send(CallAct act, List<GenericFutureListener> listeners, Object... messages) throws Throwable {
-    	return server.send(act, listeners, messages);
-    }
-    
-    public int remoteConnects() {
-    	return server.remoteConnects();
-    }
-    
-    public String useStatistics() {
-    	return server.useStatistics();
     }
     
     public void shutdown() throws Throwable {
@@ -128,10 +112,7 @@ public class NettyServer extends AbstractEndpoint {
         private ExecutorService executor = Executors.newFixedThreadPool(2);
         private EventLoopGroup bossGroup = null;
         private EventLoopGroup workerGroup = null;
-        
-        //负载均衡（哈希）
-        private RemoteClientLocator remoteClientLocator = new RemoteClientLocator();
-        
+
         void bind() throws Throwable {
             if(!super.isBind()){
             	super._Disbind();
@@ -154,6 +135,15 @@ public class NettyServer extends AbstractEndpoint {
                         if(!this.isStop()){
                             bind();
                         }
+                    } else {
+                    	super._Notstop();
+                        LOGGER.info("绑定服务器（" + this.getHost() + ":" + this.getPort() +"）成功！");
+    					if (this.getDispatcher() != null) {
+    						try{
+    							this.getDispatcher().register(_server());
+    						} catch (Throwable ex){
+    						}
+    					}
                     }
                 } else {
                 	super._Notstop();
@@ -168,37 +158,11 @@ public class NettyServer extends AbstractEndpoint {
             }
         }
         
-
 		@Override
 		public <T> Promise<T> send(CallAct act, Object... messages) throws Exception {
-			// TODO Auto-generated method stub
-			return send(act, null, messages);
+			/*发送由Server来执行*/
+			return null;
 		}
-		
-        @SuppressWarnings("rawtypes")
-        <T> NettyChannelPromise<T> send(CallAct act, List<GenericFutureListener> listeners, Object... messages) throws Exception {
-        	if(remoteClientLocator.getAll().size() == 0) {
-        	    throw new RemoteException(YeaErrorMessage.ERR_APPLICATION, RemoteConstants.ExceptionType.CONNECT.value() ,"未发现连接，请先连接服务器后发送！", null);
-        	}
-        	byte[] sessionID = UUIDGenerator.generate();
-        	RemoteClient client = remoteClientLocator.getClient(sessionID);
-        	try {
-        		NettyChannelPromise<T> future = client.send(act, listeners, RemoteConstants.MessageType.SERVICE_REQ, sessionID, messages);
-                return future;
-        	} catch (WriteRejectException ex) {
-        		/*已达写高位，稍候再重试*/
-        		Thread.sleep(50);
-        		return send(act, listeners, messages);
-        	}
-        }
-        
-        String useStatistics() {
-        	return remoteClientLocator.nodeStatistics();
-        }
-        
-        public int remoteConnects() {
-        	return remoteClientLocator.getAll().size();
-        }
         
         void shutdown() throws Exception {
         	try{
@@ -228,7 +192,7 @@ public class NettyServer extends AbstractEndpoint {
 			}
         	
         	/*通知连接该服务端的所有客户端，服务将关闭，让客户端主动关闭连接*/
-        	Collection<BalancingNode> clients = remoteClientLocator.getAll();
+        	Collection<BalancingNode> clients = loadBalancer.getAllNodes();
         	LOGGER.info("服务器（" + this.getHost() + ":" + this.getPort() +"）共连接了"+clients.size()+"个客户端！");
 			for (BalancingNode client : clients) {
 				try{
@@ -248,7 +212,7 @@ public class NettyServer extends AbstractEndpoint {
 			/*所有客户端都关闭连接或超时10秒，服务端将关闭连接*/
 			long startTime = new Date().getTime();
 			while (true) {
-				if(remoteClientLocator.getAll().size() > 0){
+				if(loadBalancer.getAllNodes().size() > 0){
 					if (new Date().getTime() - startTime > 1000 * 60) {
 						break;
 					}
@@ -267,7 +231,7 @@ public class NettyServer extends AbstractEndpoint {
         		// 配置服务端的NIO线程组
                 bossGroup = new NioEventLoopGroup();
                 workerGroup = new NioEventLoopGroup((int) Math.floor(Runtime.getRuntime().availableProcessors() * 1.5));//默认是CPU核数 * 2
-
+                
                 ServerBootstrap bootstrap = new ServerBootstrap();
                 /**
                  * 1、通过NoDelay禁用Nagle,使消息立即发出去，不用等待到一定的数据量才发出去
@@ -281,7 +245,7 @@ public class NettyServer extends AbstractEndpoint {
                 bootstrap.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class)
                     /*通用参数*/
                     .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30 * 1000)//连接超时毫秒数，默认值30000毫秒
-                    .option(ChannelOption.MAX_MESSAGES_PER_READ, 16)//一次Loop读取的最大消息数，对于ServerChannel或者NioByteChannel，默认值为16，其他Channel默认值为1
+                    .option(ChannelOption.MAX_MESSAGES_PER_READ, 32)//一次Loop读取的最大消息数，对于ServerChannel或者NioByteChannel，默认值为16，其他Channel默认值为1
                     .option(ChannelOption.WRITE_SPIN_COUNT, 16)//一个Loop写操作执行的最大次数，默认值为16。对于大数据量的写操作至多进行16次，如果16次仍没有全部写完数据，此时会提交一个新的写任务给EventLoop，任务将在下次调度继续执行
                     .option(ChannelOption.AUTO_READ, true)//自动读取，默认值为True。读操作，需要调用channel.read()设置关心的I/O事件为OP_READ，这样若有数据到达才能读取以供用户处理。该值为True时，每次读操作完毕后会自动调用channel.read()，从而有数据到达便能读取；否则，需要用户手动调用channel.read()
                     .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, 64 * 1024)//写高水位标记，默认值64KB。如果Netty的写缓冲区中的字节超过该值，Channel的isWritable()返回False
@@ -344,8 +308,9 @@ public class NettyServer extends AbstractEndpoint {
 										if (!isStop()) {
 											super.channelActive(ctx);
 	                                        RemoteClient remoteClient = new RemoteClient(ctx.channel(), _instance());
-	                                        remoteClientLocator.addLocator(remoteClient);
-	                                        LOGGER.info("远程节点" + remoteClient.getSocketAddress() + "已加入本地节点"+_instance().getHost()+":"+_instance().getPort()+"负载均衡池！");
+	                                        loadBalancer.addNode(remoteClient);
+	                                        ClientRegister.getInstance().registerBalancingNode(getRegisterName(), remoteClient);
+	                                        LOGGER.info("远程节点" + remoteClient.getRemoteAddress() + "已加入本地节点"+_instance().getHost()+":"+_instance().getPort()+"负载均衡池！");
 	                                    } else {
 											/* 如果服务中止标志已打上，此时客户端的请求连接一律拒绝 */
 											ctx.close();
@@ -355,9 +320,10 @@ public class NettyServer extends AbstractEndpoint {
                                     @Override
                                     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
                                         super.channelInactive(ctx);
-                                        Collection<BalancingNode> collection = remoteClientLocator.getLocator(ctx.channel().remoteAddress());
+										Collection<BalancingNode> collection = loadBalancer.chooseNode(ctx.channel().remoteAddress());
 										for (BalancingNode node : collection) {
-											remoteClientLocator.removeLocator((RemoteClient)node);
+											loadBalancer.markNodeDown(node);
+											ClientRegister.getInstance().unregisterBalancingNode(getRegisterName(), (AbstractBalancingNode) node);
 										}
 										LOGGER.info("远程节点" + ctx.channel().remoteAddress() + "已从本地节点"+_instance().getHost()+":"+_instance().getPort()+"负载均衡池移除！");
                                     }

@@ -83,7 +83,7 @@ public abstract class AbstractHeartBeatServerHandler extends IdleStateHandler im
         }
         
         Long idleTime = (Long) mapHeartBeat.get(IDLE_TIME);
-        if(idleTime != null && (new Date().getTime() - idleTime) < NettyConstants.HEARTBEAT.IDLETIME_LIMIT.value()){
+        if(idleTime != null && (new Date().getTime() - idleTime) < NettyConstants.Heartbeat.IDLETIME_LIMIT.value()){
           //空闲等待时间未超出上限时，心跳数据不发送
             return;
         }
@@ -106,9 +106,9 @@ public abstract class AbstractHeartBeatServerHandler extends IdleStateHandler im
     
     protected boolean checkTimeout(Type type) {
         Long endTime = (Long) (type.equals(Type.READER) ? mapHeartBeat.get(HEARTBEAT_READ_TIMEOUT) : mapHeartBeat.get(HEARTBEAT_WRITE_TIMEOUT));
-        if(endTime != null && (new Date().getTime() - endTime) > NettyConstants.HEARTBEAT.TIMEOUT.value()){
+        if(endTime != null && (new Date().getTime() - endTime) > NettyConstants.Heartbeat.TIMEOUT.value()){
             long retryTime = (Long) (type.equals(Type.READER) ? mapHeartBeat.get(HEARTBEAT_READ_RETRY) : mapHeartBeat.get(HEARTBEAT_WRITE_RETRY));;
-            if(retryTime > NettyConstants.HEARTBEAT.RETRY.value()) {
+            if(retryTime > NettyConstants.Heartbeat.RETRY.value()) {
                 mapHeartBeat.clear();
                 return true;
             } else {

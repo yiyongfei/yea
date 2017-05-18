@@ -33,23 +33,20 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
 
-import com.yea.core.balancing.hash.BalancingNode;
 import com.yea.core.base.id.UUIDGenerator;
 import com.yea.core.exception.constants.YeaErrorMessage;
+import com.yea.core.loadbalancer.AbstractBalancingNode;
+import com.yea.core.loadbalancer.BalancingNode;
 import com.yea.core.remote.AbstractClient;
-import com.yea.core.remote.AbstractEndpoint;
 import com.yea.core.remote.client.ClientRegister;
 import com.yea.core.remote.constants.RemoteConstants;
 import com.yea.core.remote.exception.RemoteException;
-import com.yea.core.remote.struct.CallAct;
 import com.yea.core.remote.struct.Header;
 import com.yea.core.remote.struct.Message;
 import com.yea.core.util.NetworkUtils;
+import com.yea.remote.netty.AbstractNettyEndpoint;
 import com.yea.remote.netty.balancing.RemoteClient;
-import com.yea.remote.netty.balancing.RemoteClientLocator;
-import com.yea.remote.netty.exception.WriteRejectException;
 import com.yea.remote.netty.handle.NettyChannelHandler;
-import com.yea.remote.netty.promise.NettyChannelPromise;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -66,24 +63,23 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.util.concurrent.GenericFutureListener;
 
 /**
  * Netty客户端启动器
  * @author yiyongfei
  */
-public class NettyClient extends AbstractEndpoint {
+public class NettyClient extends AbstractNettyEndpoint {
 	private static final Logger LOGGER = LoggerFactory.getLogger(NettyClient.class);
 	private List<Map<String, ChannelHandler>> listHandler = null;
     private List<SocketAddress> listSocketAddress = null;
-    
-	// 负载均衡（哈希）
-	private RemoteClientLocator remoteClientLocator = new RemoteClientLocator();
-
+   
 	public void connect() throws Exception {
 		if(StringUtils.isEmpty(this.getHost())){
 			this.setHost(NetworkUtils.getIp());
     	}
+		if(loadBalancer == null) {
+			initLoadBalancer();
+		}
 		if (this.getDispatcher() != null) {
 			try{
 				List<SocketAddress> listProvider = this.getDispatcher().discover(this);
@@ -147,11 +143,12 @@ public class NettyClient extends AbstractEndpoint {
     }
 	
 	public void connect(SocketAddress socketAddress) throws Exception {
-		if (!remoteClientLocator.containsLocator(socketAddress)) {
+		if (!loadBalancer.contains(socketAddress)) {
 			Client client = new Client();
 			if(StringUtils.isEmpty(this.getHost())){
 				this.setHost(NetworkUtils.getIp());
 	    	}
+			client.setRegisterName(this.getRegisterName());
 			client.setHost(this.getHost());
 			client.setPort(this.getPort());
 			client.setApplicationContext(this.getApplicationContext());
@@ -159,55 +156,13 @@ public class NettyClient extends AbstractEndpoint {
 		}
     }
 	
-	public <T> NettyChannelPromise<T> send(CallAct act, Object... messages) throws Exception {
-        return send(act, null, messages);
-    }
-    
-    @SuppressWarnings("rawtypes")
-    public <T> NettyChannelPromise<T> send(CallAct act, List<GenericFutureListener> listeners, Object... messages) throws Exception {
-    	if(remoteClientLocator.getAll().size() == 0) {
-    	    throw new RemoteException(YeaErrorMessage.ERR_APPLICATION, RemoteConstants.ExceptionType.CONNECT.value() ,"未发现连接，请先连接服务器后发送！", null);
-    	}
-    	byte[] sessionID = UUIDGenerator.generate();
-    	RemoteClient client = remoteClientLocator.getClient(sessionID);
-    	try {
-    		NettyChannelPromise<T> future = client.send(act, listeners, RemoteConstants.MessageType.SERVICE_REQ, sessionID, messages);
-            return future;
-    	} catch (WriteRejectException ex) {
-    		/*已达写高位，稍候再重试*/
-    		Thread.sleep(50);
-    		return send(act, listeners, messages);
-    	}
-    }
-    
-    public int remoteConnects() {
-    	return remoteClientLocator.getAll().size();
-    }
-    
-	public RemoteClient getRemoteClient(SocketAddress address) {
-		RemoteClient remoteClient = null;
-		if(address != null){
-			Collection<BalancingNode> collection = remoteClientLocator.getLocator(address);
-			if (collection != null && collection.size() > 0) {
-				remoteClient = (RemoteClient)collection.iterator().next();
-			}
-		}
-		if (remoteClient == null) {
-			remoteClient = remoteClientLocator.getClient(UUIDGenerator.generate());
-		}
-		return remoteClient;
-	}
-
-    public String useStatistics() {
-    	return remoteClientLocator.nodeStatistics();
-    }
-
 	public void disconnect() throws Exception {
     	List<BalancingNode> tmp = new ArrayList<BalancingNode>();
-    	tmp.addAll(remoteClientLocator.getAll());
+    	tmp.addAll(loadBalancer.getAllNodes());
     	for(BalancingNode node : tmp){
     		((Client)((RemoteClient) node).getEndpoint()).stop();
-    		remoteClientLocator.removeLocator((RemoteClient)node);
+    		loadBalancer.markNodeDown(node);
+    		ClientRegister.getInstance().unregisterBalancingNode(this.getRegisterName(), (AbstractBalancingNode) node);
     		node = null;
     	}
     	if (this.getDispatcher() != null) {
@@ -216,16 +171,6 @@ public class NettyClient extends AbstractEndpoint {
 			} catch (Throwable ex){
 			}
 		}
-    }
-    
-    public void disconnect(SocketAddress socketAddress) throws Exception {
-        List<BalancingNode> tmp = new ArrayList<BalancingNode>();
-        tmp.addAll(remoteClientLocator.getLocator(socketAddress));
-        for(BalancingNode node : tmp){
-        	((Client)((RemoteClient) node).getEndpoint()).stop();
-    		remoteClientLocator.removeLocator((RemoteClient)node);
-    		node = null;
-        }
     }
 
 	public List<Map<String, ChannelHandler>> getListHandler() {
@@ -285,27 +230,6 @@ public class NettyClient extends AbstractEndpoint {
 
 		}
 
-		public <T> NettyChannelPromise<T> send(CallAct act, Object... messages) throws Exception {
-			return send(act, null, messages);
-		}
-		
-		@SuppressWarnings("rawtypes")
-		<T> NettyChannelPromise<T> send(CallAct act, List<GenericFutureListener> listeners, Object... messages)
-				throws Exception {
-			if (remoteClientLocator.getAll().size() == 0) {
-				throw new RemoteException(YeaErrorMessage.ERR_APPLICATION,
-						RemoteConstants.ExceptionType.CONNECT.value(), "未发现连接，请先连接服务器后发送！", null);
-			}
-			byte[] sessionID = UUIDGenerator.generate();
-			RemoteClient client = remoteClientLocator.getClient(sessionID);
-			NettyChannelPromise<T> future = client.send(act, listeners, RemoteConstants.MessageType.SERVICE_REQ, sessionID, messages);
-			return future;
-		}
-
-		String useStatistics() {
-			return remoteClientLocator.nodeStatistics();
-		}
-
 		void disconnect() throws Exception {
 			try {
 				if (group != null) {
@@ -329,7 +253,8 @@ public class NettyClient extends AbstractEndpoint {
 				return;
 			}
 			try {
-				group = new NioEventLoopGroup((int) Math.floor(Runtime.getRuntime().availableProcessors() * 1.5));
+				group = new NioEventLoopGroup((int) Math.floor(Runtime.getRuntime().availableProcessors()));
+				
 				// 配置客户端NIO线程组
 				Bootstrap bootstrap = new Bootstrap();
 				/**
@@ -341,9 +266,9 @@ public class NettyClient extends AbstractEndpoint {
 				 */
 				bootstrap.group(group).channel(NioSocketChannel.class).option(ChannelOption.TCP_NODELAY, true)
 						.option(ChannelOption.SO_KEEPALIVE, true).option(ChannelOption.SO_REUSEADDR, true)
-						.option(ChannelOption.SO_RCVBUF, 128 * 1024).option(ChannelOption.SO_SNDBUF, 64 * 1024)
-						.option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, 64 * 1024)
-						.option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 32 * 1024)
+						.option(ChannelOption.SO_RCVBUF, 128 * 1024).option(ChannelOption.SO_SNDBUF, 128 * 1024)
+						.option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, 128 * 1024)
+						.option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 64 * 1024)
 						.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
 						.option(ChannelOption.RCVBUF_ALLOCATOR, AdaptiveRecvByteBufAllocator.DEFAULT)
 						.handler(new LoggingHandler(LogLevel.INFO)).handler(new ChannelInitializer<SocketChannel>() {
@@ -376,9 +301,10 @@ public class NettyClient extends AbstractEndpoint {
 									        	ClientRegister.getInstance().registerAct(registerName, actnames);
 											} else if (message.getHeader() != null && message.getHeader().getType() == RemoteConstants.MessageType.STOP.value()) {
 									        	LOGGER.info(ctx.channel().localAddress() + "从" + ctx.channel().remoteAddress() + "接收服务端将关闭服务的请求！");
-									        	Collection<BalancingNode> collection = remoteClientLocator.getLocator(ctx.channel().remoteAddress());
+									        	Collection<BalancingNode> collection = loadBalancer.chooseNode(ctx.channel().remoteAddress());
 												for (BalancingNode node : collection) {
-													remoteClientLocator.removeLocator((RemoteClient) node);
+													loadBalancer.markNodeDown(node);
+													ClientRegister.getInstance().unregisterBalancingNode(getRegisterName(), (AbstractBalancingNode) node);
 												}
 									        	stop();
 									        } else {
@@ -390,8 +316,9 @@ public class NettyClient extends AbstractEndpoint {
 	                                    public void channelActive(ChannelHandlerContext ctx) throws Exception {
 											super.channelActive(ctx);
 											RemoteClient remoteClient = new RemoteClient(ctx.channel(), _instance());
-											LOGGER.info("远程节点" + remoteClient.getSocketAddress() + "已加入本地节点"+_instance().getHost()+":"+_instance().getPort()+"负载均衡池！");
-											remoteClientLocator.addLocator(remoteClient);
+											LOGGER.info("远程节点" + remoteClient.getRemoteAddress() + "已加入本地节点"+_instance().getHost()+":"+_instance().getPort()+"负载均衡池！");
+											loadBalancer.addNode(remoteClient);
+											ClientRegister.getInstance().registerBalancingNode(getRegisterName(), remoteClient);
 											
 											/*向服务端发送查找ACT名称的请求，以向Client注册中心注册Act*/
 											Message nettyMessage = new Message();
@@ -407,10 +334,10 @@ public class NettyClient extends AbstractEndpoint {
 										public void channelInactive(ChannelHandlerContext ctx) throws Exception {
 											super.channelInactive(ctx);
 											LOGGER.info("远程节点" + ctx.channel().remoteAddress() + "已从本地节点"+_instance().getHost()+":"+_instance().getPort()+"负载均衡池移除！");
-											Collection<BalancingNode> collection = remoteClientLocator
-													.getLocator(ctx.channel().remoteAddress());
+											Collection<BalancingNode> collection = loadBalancer.chooseNode(ctx.channel().remoteAddress());
 											for (BalancingNode node : collection) {
-												remoteClientLocator.removeLocator((RemoteClient) node);
+												loadBalancer.markNodeDown(node);
+												ClientRegister.getInstance().unregisterBalancingNode(getRegisterName(), (AbstractBalancingNode) node);
 											}
 										}
 
@@ -462,7 +389,7 @@ public class NettyClient extends AbstractEndpoint {
 					_Connection();
 				} catch (Exception e) {
 					LOGGER.error("连接服务器失败，抛出异常！", e);
-					if (remoteClientLocator.containsLocator(socketAddress)) {
+					if (loadBalancer.contains(socketAddress)) {
 						LOGGER.info("虽连接远程节点失败，但本地节点"+_instance().getHost()+":"+_instance().getPort()+"负载均衡池里发现远程节点" + socketAddress + "存在，更改连接状态！");
 						_instance()._ConnectSuccess();
 						_instance()._Connected();
@@ -485,7 +412,5 @@ public class NettyClient extends AbstractEndpoint {
 				}
 			}
 		}
-
 	}
-
 }

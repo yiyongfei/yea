@@ -16,8 +16,8 @@
 		<logback.version>1.1.9</logback.version>
 		<logback.spring.version>0.1.4</logback.spring.version>
 		<slf4j.version>1.7.22</slf4j.version>
-		<mybatis.version>3.2.8</mybatis.version>
-        <mybatis.spring.version>1.2.2</mybatis.spring.version>
+		<mybatis.version>3.4.1</mybatis.version>
+        <mybatis.spring.version>1.3.0</mybatis.spring.version>
         <fst.version>2.48</fst.version>
 		<hessian.version>4.0.38</hessian.version>
 		<jackson.version>2.8.7</jackson.version>
@@ -25,8 +25,14 @@
 		<ehcache.version>3.3.1</ehcache.version>
 		<jedis.version>2.9.0</jedis.version>
 		<freemarker.version>2.3.23</freemarker.version>
-		<netty.version>4.0.25.Final</netty.version>
+		<netty.version>4.0.41.Final</netty.version>
+		<hystrix.version>1.5.11</hystrix.version>
 		<curator.version>2.12.0</curator.version>
+		<archaius.version>0.7.4</archaius.version>
+		<servo.version>0.10.1</servo.version>
+		<netflix.commons.version>0.3.0</netflix.commons.version>
+		<rxjava.version>1.2.0</rxjava.version>
+		<guava.version>16.0.1</guava.version>
 		<shiro.version>1.3.2</shiro.version>
 		<jodd.version>3.6.2</jodd.version>
 	</properties>
@@ -105,6 +111,12 @@
 				<groupId>de.ruedigermoeller</groupId>
 				<artifactId>fst</artifactId>
 				<version>${fst.version}</version>
+				<exclusions>
+					<exclusion>
+						<groupId>com.fasterxml.jackson.core</groupId>
+						<artifactId>*</artifactId>
+					</exclusion>
+				</exclusions>
 			</dependency>
 			<dependency>
 				<groupId>com.caucho</groupId>
@@ -164,7 +176,59 @@
 				<artifactId>netty-all</artifactId>
 				<version>${netty.version}</version>
 			</dependency>
-			
+			<dependency>
+			    <groupId>com.netflix.hystrix</groupId>
+			    <artifactId>hystrix-core</artifactId>
+			    <version>${hystrix.version}</version>
+			    <exclusions>
+					<exclusion>
+						<groupId>com.netflix.archaius</groupId>
+						<artifactId>archaius-core</artifactId>
+					</exclusion>
+					<exclusion>
+						<groupId>io.reactivex</groupId>
+						<artifactId>rxjava</artifactId>
+					</exclusion>
+				</exclusions>
+			</dependency>
+			<!-- 慎重选择archaius-core版本，0.7.5后需要JDK1.8支持 -->
+			<dependency>
+				<groupId>com.netflix.archaius</groupId>
+				<artifactId>archaius-core</artifactId>
+				<version>${archaius.version}</version>
+				<exclusions>
+					<exclusion>
+						<groupId>com.fasterxml.jackson.core</groupId>
+						<artifactId>*</artifactId>
+					</exclusion>
+				</exclusions>
+			</dependency>
+			<!-- 慎重选择servo-core版本，0.11.0后需要JDK1.8支持 -->
+			<dependency>
+				<groupId>com.netflix.servo</groupId>
+				<artifactId>servo-core</artifactId>
+				<version>${servo.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.netflix.netflix-commons</groupId>
+				<artifactId>netflix-statistics</artifactId>
+				<version>${netflix.commons.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>io.reactivex</groupId>
+				<artifactId>rxjava</artifactId>
+				<version>${rxjava.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.google.guava</groupId>
+				<artifactId>guava</artifactId>
+				<version>${guava.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>commons-configuration</groupId>
+				<artifactId>commons-configuration</artifactId>
+				<version>1.8</version>
+			</dependency>
 			<!-- Zookeeper客户端支持 -->
 			<dependency>
 			    <groupId>org.apache.curator</groupId>
@@ -205,6 +269,11 @@
 			    <version>${yea.version}</version>
 			</dependency>
 			<dependency>
+				<groupId>com.yea</groupId>
+				<artifactId>yea-loadbalancer</artifactId>
+				<version>${yea.version}</version>
+			</dependency>
+			<dependency>
 			    <groupId>com.yea</groupId>
 			    <artifactId>yea-netty</artifactId>
 			    <version>${yea.version}</version>
@@ -221,6 +290,7 @@
         <module>yea-dispatcher</module>
         <module>yea-web</module>
         <module>yea-cache</module>
+        <module>yea-loadbalancer</module>
     </modules>
 
 	<build>

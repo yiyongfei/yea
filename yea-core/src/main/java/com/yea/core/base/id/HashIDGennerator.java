@@ -17,8 +17,8 @@ package com.yea.core.base.id;
 
 import java.io.UnsupportedEncodingException;
 
-import com.yea.core.balancing.hash.DefaultHashAlgorithm;
 import com.yea.core.exception.YeaException;
+import com.yea.core.hash.DefaultHashAlgorithm;
 
 /**
  * 

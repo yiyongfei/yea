@@ -21,19 +21,20 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import com.yea.core.exception.constants.YeaErrorMessage;
+import com.yea.core.loadbalancer.AbstractBalancingNode;
+import com.yea.core.remote.client.ClientRegister;
 import com.yea.core.remote.constants.RemoteConstants;
 import com.yea.core.remote.exception.RemoteException;
 import com.yea.core.remote.observer.Observable;
 import com.yea.core.remote.observer.Observer;
 import com.yea.core.remote.struct.Header;
-import com.yea.remote.netty.balancing.RemoteClient;
-import com.yea.remote.netty.balancing.RemoteClientLocator;
 import com.yea.remote.netty.promise.NettyChannelPromise;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
+import rx.Subscriber;
 
 
 /**
@@ -41,28 +42,19 @@ import io.netty.util.concurrent.GenericFutureListener;
  * @author yiyongfei
  * 
  */
-public class AwaitPromise<T> implements NettyChannelPromise<T>, Observer<T> {
+public class AwaitPromise<T> implements NettyChannelPromise<T>, Observer<T>, rx.Observable.OnSubscribe<NettyChannelPromise<T>> {
     private ChannelPromise promise;
     private volatile T object;
     private volatile Throwable throwable;
     private volatile boolean isChanged;
     private volatile boolean isSuccess;
     private volatile byte[] sessionID;
-//    private volatile List<Class<?>> allowObservable;
     
     public AwaitPromise(ChannelPromise promise){
         this.promise = promise;
         this.isChanged = false;
         this.object = null;
-//        this.allowObservable = new ArrayList<Class<?>>();
-//        allowObservable.add(ServiceClientHandler.class);
-//        allowObservable.add(ExceptionHandler.class);
-//        allowObservable.add(DispatchClientHandler.class);
     }
-    
-//    public boolean isAllowObservable(Class<?> clazz) {
-//        return allowObservable.contains(clazz);
-//    }
     
     public T awaitObject() throws Throwable{
         return awaitObject(0L);
@@ -92,9 +84,9 @@ public class AwaitPromise<T> implements NettyChannelPromise<T>, Observer<T> {
                         long endTime = new Date().getTime();
                         if(timeout > 0L && (endTime - startTime > timeout)) {
                         	//处理速度达到慢的限制，降低慢权重
-            				RemoteClient client = RemoteClientLocator.getRemoteClient(this.promise.channel());
+                        	AbstractBalancingNode client = ClientRegister.getInstance().getBalancingNode(this.promise.channel().localAddress(), this.promise.channel().remoteAddress());
             				if (client != null) {
-            					client.slowdown();
+            					client.renewServerHealth(RemoteConstants.ServerHealthType.SLOW, 1.0);
             				}
                             throw new RemoteException(YeaErrorMessage.ERR_FOUNDATION, RemoteConstants.ExceptionType.TIMEOUT.value() , promise.channel() + "获取数据超时！", null);
                         }
@@ -118,9 +110,9 @@ public class AwaitPromise<T> implements NettyChannelPromise<T>, Observer<T> {
             TimeUnit.MILLISECONDS.sleep(50);
             long endTime = new Date().getTime();
             if(timeout > 0L && (endTime - startTime > timeout)) {
-            	RemoteClient client = RemoteClientLocator.getRemoteClient(this.promise.channel());
+            	AbstractBalancingNode client = ClientRegister.getInstance().getBalancingNode(this.promise.channel().localAddress(), this.promise.channel().remoteAddress());
 				if (client != null) {
-					client.slowdown();
+					client.renewServerHealth(RemoteConstants.ServerHealthType.SLOW, 1.0);
 				}
                 throw new RemoteException(YeaErrorMessage.ERR_FOUNDATION, RemoteConstants.ExceptionType.TIMEOUT.value() , promise.channel() + "获取数据超时！", null);
             }
@@ -133,14 +125,20 @@ public class AwaitPromise<T> implements NettyChannelPromise<T>, Observer<T> {
      * @see com.yea.core.remote.observer.Observer#update(com.yea.core.remote.observer.Observable, java.lang.Object)
      */
     public void update(byte[] sessionID, Header header, Observable o, T arg) {
-        this.sessionID = sessionID;
+    	this.sessionID = sessionID;
         o.deleteObserver(sessionID, this);
 		if (RemoteConstants.MessageResult.SUCCESS.value() == header.getResult()) {
 			this.object = arg;
 			this.isSuccess = true;
+			if(this.subscriber != null) {
+				this.subscriber.onCompleted();//执行rx.Observer的onCompleted方法，通知LoadBalancerCommand触发onCompleted事件，记录完成情况(与ribbon有关)
+			}
 		} else {
 			this.throwable = (Throwable)arg;
 			this.isSuccess = false;
+			if(this.subscriber != null) {
+				this.subscriber.onError(this.throwable);//执行rx.Observer的onError方法，通知LoadBalancerCommand触发onError事件，记录完成情况(与ribbon有关)
+			}
 		}
 		this.isChanged = true;
     }
@@ -328,4 +326,12 @@ public class AwaitPromise<T> implements NettyChannelPromise<T>, Observer<T> {
         return promise.get(timeout, unit);
     }
 
+    /*用于得到服务响应后的回调*/
+    private Subscriber<? super NettyChannelPromise<T>> subscriber;
+    @Override
+	public void call(Subscriber<? super NettyChannelPromise<T>> subscriber) {
+		// TODO Auto-generated method stub
+    	this.subscriber = subscriber;
+		subscriber.onNext(this);
+	}
 }

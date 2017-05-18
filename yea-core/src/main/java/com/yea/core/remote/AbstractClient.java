@@ -19,6 +19,8 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import com.yea.core.remote.constants.RemoteConstants;
+import com.yea.core.remote.promise.Promise;
+import com.yea.core.remote.struct.CallAct;
 
 /**
  * 
@@ -69,7 +71,8 @@ public abstract class AbstractClient extends AbstractEndpoint {
         this.isStop = true;
     }
     
-    public int remoteConnects() {
-    	return 1;
+    public <T> Promise<T> send(CallAct act, Object... messages) throws Throwable {
+    	return null;
     }
+    
 }

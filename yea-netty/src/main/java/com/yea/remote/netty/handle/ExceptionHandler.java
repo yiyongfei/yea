@@ -55,10 +55,10 @@ public class ExceptionHandler extends ChannelInboundHandlerObservable implements
         	return;
         }
         if (message.getHeader().getType() == RemoteConstants.MessageType.SUSPEND_REQ.value()) {
-        	LOGGER.info(ctx.channel().localAddress() + "从" + ctx.channel().remoteAddress() + "接收请求后处理时出现异常！");
-        	ctx.writeAndFlush(buildResp(message.getHeader().getResult(), message.getHeader().getSessionID(), (Date)message.getHeader().getAttachment().get(NettyConstants.HEADER_DATE), new Date(), message.getBody(), (String)message.getHeader().getAttachment().get(NettyConstants.CALLBACK_ACT)));
+        	LOGGER.info(ctx.channel().localAddress() + "从" + ctx.channel().remoteAddress() + "接收请求后处理时出现异常！异常内容：" + message.getBody());
+        	ctx.writeAndFlush(buildResp(message.getHeader().getResult(), message.getHeader().getSessionID(), (Date)message.getHeader().getAttachment().get(NettyConstants.MessageHeaderAttachment.HEADER_DATE.value()), new Date(), message.getBody(), (String)message.getHeader().getAttachment().get(NettyConstants.MessageHeaderAttachment.CALLBACK_ACT.value())));
         } else if (message.getHeader().getType() == RemoteConstants.MessageType.SUSPEND_RESP.value()) {
-            LOGGER.info(ctx.channel().localAddress() + "从" + ctx.channel().remoteAddress() + "接收响应后处理时出现异常！");
+            LOGGER.info(ctx.channel().localAddress() + "从" + ctx.channel().remoteAddress() + "接收响应后处理时出现异常！异常内容：" + message.getBody());
             notifyObservers(message.getHeader().getSessionID(), message.getHeader(), message.getBody());
         } else {
             ctx.fireChannelRead(msg);
@@ -87,10 +87,10 @@ public class ExceptionHandler extends ChannelInboundHandlerObservable implements
         header.setSessionID(sessionID);
         header.setResult(result);
         header.setAttachment(new HashMap<String, Object>());
-        header.getAttachment().put(NettyConstants.CALL_ACT, act == null || act.trim().length() == 0 ? null : act);
-        header.getAttachment().put(NettyConstants.REQUEST_DATE, reqDate);
-        header.getAttachment().put(NettyConstants.REQUEST_RECIEVE_DATE, reqRecieveDate);
-        header.getAttachment().put(NettyConstants.HEADER_DATE, new Date());
+        header.getAttachment().put(NettyConstants.MessageHeaderAttachment.CALL_ACT.value(), act == null || act.trim().length() == 0 ? null : act);
+        header.getAttachment().put(NettyConstants.MessageHeaderAttachment.REQUEST_DATE.value(), reqDate);
+        header.getAttachment().put(NettyConstants.MessageHeaderAttachment.REQUEST_RECIEVE_DATE.value(), reqRecieveDate);
+        header.getAttachment().put(NettyConstants.MessageHeaderAttachment.HEADER_DATE.value(), new Date());
         message.setHeader(header);
         message.setBody(body);
         return message;

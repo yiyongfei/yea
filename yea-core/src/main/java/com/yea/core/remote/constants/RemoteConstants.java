@@ -40,6 +40,8 @@ public class RemoteConstants {
         ONE_WAY((byte) 9),
         ACTLOOKUP_REQ((byte)10),
         ACTLOOKUP_RESP((byte)11),
+        PING_REQ((byte)12),
+        PING_RESP((byte)13),
         CONSUMER_REGISTER((byte) 21), 
         CONSUMER_REGISTER_RESULT((byte) 22), 
         CONSUMER_LOGOUT((byte) 23),
@@ -104,6 +106,19 @@ public class RemoteConstants {
             this.value = value;
         }
         public String value() {
+            return this.value;
+        }
+    }
+    
+
+    public enum ServerHealthType {
+        SEND(Byte.parseByte("1")), SLOW(Byte.parseByte("2")), HYSTRIX(Byte.parseByte("3"));
+        
+        private byte value;
+        private ServerHealthType(byte value) {
+            this.value = value;
+        }
+        public byte value() {
             return this.value;
         }
     }

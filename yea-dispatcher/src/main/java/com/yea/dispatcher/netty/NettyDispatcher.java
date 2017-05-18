@@ -30,7 +30,6 @@ import com.yea.core.remote.AbstractEndpoint;
 import com.yea.core.remote.constants.RemoteConstants;
 import com.yea.core.remote.observer.Observable;
 import com.yea.dispatcher.netty.promise.ConsumerPromise;
-import com.yea.remote.netty.balancing.RemoteClient;
 import com.yea.remote.netty.client.NettyClient;
 import com.yea.remote.netty.promise.NettyChannelPromise;
 import com.yea.remote.netty.server.NettyServer;
@@ -48,29 +47,31 @@ public class NettyDispatcher implements DispatcherEndpoint {
 	
 	@Override
 	public void register(AbstractEndpoint endpoint) throws Throwable {
-		RemoteClient remoteClient = dispatchClient.getRemoteClient(null);
+//		RemoteClient remoteClient = (RemoteClient) dispatchClient.remoteLocator().getClient(UUIDGenerator.generate());
 		String registerName = endpoint.getRegisterName();
 		SocketAddress socketAddress = new InetSocketAddress(endpoint.getHost(), endpoint.getPort());
 		byte[] sessionID = UUIDGenerator.generate();
 		try {
 			if (endpoint instanceof NettyClient) {
-				remoteClient.send(null, null, RemoteConstants.MessageType.CONSUMER_REGISTER, sessionID, registerName, socketAddress);
+				dispatchClient.send(null, null, RemoteConstants.MessageType.CONSUMER_REGISTER, sessionID, registerName, socketAddress);
 				@SuppressWarnings("rawtypes")
 				ConsumerPromise observer = new ConsumerPromise((NettyClient)endpoint);
 				Observable handle = null;
-				Iterator<Map.Entry<String, ChannelHandler>> itHandle = remoteClient.getChannel().pipeline().iterator();
+				Iterator<Map<String, ChannelHandler>> itHandle = dispatchClient.getListHandler().iterator();
 		        while(itHandle.hasNext()){
-		            Map.Entry<String, ChannelHandler> entry = itHandle.next();
-		            if(entry.getValue() instanceof Observable){
-		                handle = (Observable) entry.getValue();
-		                handle.addObserver(sessionID, observer);
+		            Map<String, ChannelHandler> map = itHandle.next();
+		            for(Map.Entry<String, ChannelHandler> entry : map.entrySet()) {
+		            	if(entry.getValue() instanceof Observable){
+			                handle = (Observable) entry.getValue();
+			                handle.addObserver(sessionID, observer);
+			            }
 		            }
 		        }
 				
 				LOGGER.info("" + endpoint.getHost() + ":" + endpoint.getPort() +"向" + dispatchClient.getHost() + ":" + dispatchClient.getPort() +"注册("+endpoint.getRegisterName()+")服务消费者成功");
 			}
 			if (endpoint instanceof NettyServer) {
-				remoteClient.send(null, null, RemoteConstants.MessageType.PROVIDER_REGISTER, sessionID, registerName, socketAddress);
+				dispatchClient.send(null, null, RemoteConstants.MessageType.PROVIDER_REGISTER, sessionID, registerName, socketAddress);
 				LOGGER.info("" + endpoint.getHost() + ":" + endpoint.getPort() +"向" + dispatchClient.getHost() + ":" + dispatchClient.getPort() +"注册("+endpoint.getRegisterName()+")服务提供者成功");
 			}
 		} catch (Throwable ex) {
@@ -82,18 +83,17 @@ public class NettyDispatcher implements DispatcherEndpoint {
 
 	@Override
 	public void logout(AbstractEndpoint endpoint) throws Throwable {
-		RemoteClient remoteClient = dispatchClient.getRemoteClient(null);
 		byte[] sessionID = UUIDGenerator.generate();
 		String registerName = endpoint.getRegisterName();
 		SocketAddress socketAddress = new InetSocketAddress(endpoint.getHost(), endpoint.getPort());
 		try {
 			if (endpoint instanceof NettyClient) {
-				remoteClient.send(null, null, RemoteConstants.MessageType.CONSUMER_LOGOUT, sessionID,
+				dispatchClient.send(null, null, RemoteConstants.MessageType.CONSUMER_LOGOUT, sessionID,
 						registerName, socketAddress);
 				LOGGER.info("" + endpoint.getHost() + ":" + endpoint.getPort() + "向" + dispatchClient.getHost() + ":" + dispatchClient.getPort() +"注销("+endpoint.getRegisterName()+")服务消费者成功");
 			}
 			if (endpoint instanceof NettyServer) {
-				remoteClient.send(null, null, RemoteConstants.MessageType.PROVIDER_LOGOUT, sessionID,
+				dispatchClient.send(null, null, RemoteConstants.MessageType.PROVIDER_LOGOUT, sessionID,
 						registerName, socketAddress);
 				LOGGER.info("" + endpoint.getHost() + ":" + endpoint.getPort() + "向" + dispatchClient.getHost() + ":" + dispatchClient.getPort() +"注销("+endpoint.getRegisterName()+")服务提供者成功");
 			}
@@ -106,10 +106,9 @@ public class NettyDispatcher implements DispatcherEndpoint {
 
 	@Override
 	public List<SocketAddress> discover(AbstractEndpoint endpoint) throws Throwable {
-		RemoteClient remoteClient = dispatchClient.getRemoteClient(null);
 		byte[] sessionID = UUIDGenerator.generate();
 		try {
-			NettyChannelPromise<List<SocketAddress>> promise = remoteClient.send(null, null, RemoteConstants.MessageType.PROVIDER_DISCOVER,
+			NettyChannelPromise<List<SocketAddress>> promise = dispatchClient.send(null, null, RemoteConstants.MessageType.PROVIDER_DISCOVER,
 					sessionID, endpoint.getRegisterName());
 			return promise.awaitObject(1000 * 30);
 		} catch (Throwable ex) {

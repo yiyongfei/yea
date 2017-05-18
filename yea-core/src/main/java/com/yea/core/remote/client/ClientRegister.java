@@ -15,11 +15,20 @@
  */
 package com.yea.core.remote.client;
 
+import java.net.SocketAddress;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.yea.core.loadbalancer.AbstractBalancingNode;
+import com.yea.core.loadbalancer.BalancingNode;
 import com.yea.core.remote.AbstractEndpoint;
 import com.yea.core.remote.exception.RemoteException;
 import com.yea.core.remote.promise.Promise;
@@ -28,11 +37,14 @@ import com.yea.core.remote.struct.CallAct;
 @SuppressWarnings("rawtypes")
 public class ClientRegister<T> {
 	private Map<String, AbstractEndpoint> mapEndpoint = null;
+	private Map<String, List<AbstractBalancingNode>> mapBalancingNode = null;
 	private Map<String, Set<String>> mapActName = null;
 
 	private ClientRegister() {
 		mapEndpoint = new ConcurrentHashMap<String, AbstractEndpoint>();
+		mapBalancingNode = new ConcurrentHashMap<String, List<AbstractBalancingNode>>();
 		mapActName = new ConcurrentHashMap<String, Set<String>>();
+		scheduledDistribution();
 	}
 
 	public Promise<T> send(CallAct act, Object... messages) throws Throwable {
@@ -69,6 +81,59 @@ public class ClientRegister<T> {
 			mapEndpoint.put(registerName, endpoint);
 		}
 	}
+	
+	public void registerBalancingNode(String registerName, AbstractBalancingNode node) {
+		if (node != null) {
+			if (!mapBalancingNode.containsKey(registerName)) {
+				mapBalancingNode.put(registerName, new CopyOnWriteArrayList<AbstractBalancingNode>());
+			}
+			mapBalancingNode.get(registerName).add(node);
+		}
+	}
+	
+	public void unregisterBalancingNode(String registerName, AbstractBalancingNode node) {
+		if (node != null && mapBalancingNode.containsKey(registerName)) {
+			Iterator<AbstractBalancingNode> it = mapBalancingNode.get(registerName).iterator();
+			BalancingNode tmp;
+			while(it.hasNext()) {
+				tmp = it.next();
+				if(tmp.getSocketAddress().equals(node.getSocketAddress())) {
+					mapBalancingNode.get(registerName).remove(tmp);
+				}
+			}
+		}
+	}
+	
+	public List<BalancingNode> getAllBalancingNode(String registerName) {
+		List<BalancingNode> list = new CopyOnWriteArrayList<BalancingNode>();
+		if(mapBalancingNode.containsKey(registerName)) {
+			list.addAll(mapBalancingNode.get(registerName));
+		}
+		return list;
+	}
+	
+	public AbstractBalancingNode getBalancingNode(String registerName, SocketAddress remote) {
+		if(mapBalancingNode.containsKey(registerName)) {
+			List<AbstractBalancingNode> listBalancingNode = mapBalancingNode.get(registerName);
+			for(AbstractBalancingNode node : listBalancingNode) {
+				if(node.getSocketAddress().equals(remote)) {
+					return node;
+				}
+			}
+		}
+		return null;
+	}
+	
+	public AbstractBalancingNode getBalancingNode(SocketAddress local, SocketAddress remote) {
+		for(List<AbstractBalancingNode> listBalancingNode : mapBalancingNode.values()) {
+			for(AbstractBalancingNode node : listBalancingNode) {
+				if(node.getLocalAddress().equals(local) && node.getSocketAddress().equals(remote)) {
+					return node;
+				}
+			}
+		}
+		return null;
+	}
 
 	public void registerAct(String registerName, String[] actnames) {
 		if (actnames != null && actnames.length > 0) {
@@ -89,4 +154,36 @@ public class ClientRegister<T> {
 	private static class Holder {
 		private static final ClientRegister SINGLETON = new ClientRegister();
 	}
+	
+	private final ExecutorService executor = Executors.newSingleThreadExecutor();
+	private final AtomicBoolean scheduled = new AtomicBoolean(false);
+	private void scheduledDistribution() {
+		if (scheduled.compareAndSet(false, true)) {
+			executor.execute(resetHealthRunnable);
+		}
+	}
+	
+	private final Runnable resetHealthRunnable = new Runnable() {
+		@Override
+		public void run() {
+			while (true) {
+				try {
+					for(List<AbstractBalancingNode> listBalancingNode : mapBalancingNode.values()) {
+						if (listBalancingNode.size() == 0) {
+							scheduled.set(false);
+							break;
+						}
+						for (AbstractBalancingNode node : listBalancingNode) {
+							if(node.isSuspended()) {
+								node.resetServerHealth();
+							}
+						}
+					}
+					
+					Thread.sleep(200);
+				} catch (Exception e) {
+				}
+			}
+		}
+	};
 }

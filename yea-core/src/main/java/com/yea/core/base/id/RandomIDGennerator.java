@@ -23,7 +23,7 @@ import java.util.Date;
 import java.util.Enumeration;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.yea.core.balancing.hash.DefaultHashAlgorithm;
+import com.yea.core.hash.DefaultHashAlgorithm;
 import com.yea.core.util.NumberUtils;
 
 /**

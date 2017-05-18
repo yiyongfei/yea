@@ -21,13 +21,25 @@ package com.yea.remote.netty.constants;
  * 
  */
 public class NettyConstants {
-    public static final String CALL_ACT = "call_act";
-    public static final String CALL_REFLECT = "call_reflect";
-    public static final String CALLBACK_ACT = "callback_act";
-    public static final String HEADER_DATE = "header_date";
-    public static final String REQUEST_DATE = "req_date";
-    public static final String REQUEST_RECIEVE_DATE = "req_rec_date";
     
+    public final static long SLOW_LIMIT = 28 * 100;
+    public final static int SEND_QUEUE_LIMIT = 128;//无用，原RemoteClient的发送队列阻塞值
+    
+    public enum MessageHeaderAttachment {
+    	CALL_ACT("1"), CALL_REFLECT("2"), CALLBACK_ACT("3"),
+    	HEADER_DATE("11"), REQUEST_DATE("12"), REQUEST_RECIEVE_DATE("13");
+        
+        private String value;
+        private MessageHeaderAttachment(String value) {
+            this.value = value;
+        }
+        public String value() {
+            return this.value;
+        }
+        public String toString() {
+            return this.value;
+        }
+    }
     
     public enum ThreadPool {
         SERVICE_SERVER_HANDLER(3), SERVICE_CLIENT_HANDLER(3);
@@ -41,12 +53,12 @@ public class NettyConstants {
         }
     }
     
-    public enum HEARTBEAT {
+    public enum Heartbeat {
         TIMEOUT(60*1000), IDLETIME_LIMIT(60*1000), RETRY(6);
         
         
         private long value;
-        private HEARTBEAT(long value) {
+        private Heartbeat(long value) {
             this.value = value;
         }
         public long value() {

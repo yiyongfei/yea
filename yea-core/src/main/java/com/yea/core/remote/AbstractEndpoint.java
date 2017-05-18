@@ -70,6 +70,5 @@ public abstract class AbstractEndpoint implements ApplicationContextAware {
         return context;
     }
     
-    public abstract int remoteConnects();
     public abstract <T> Promise<T> send(CallAct act, Object... messages) throws Throwable;
 }

@@ -45,10 +45,11 @@ public class DefaultClient extends AbstractEndpoint {
 	
 	public void disconnect() throws Exception {
 	}
-	
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-	public Promise send(CallAct act, Object... messages) throws Exception {
-    	DefaultPromise promise = new DefaultPromise();
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public <T> Promise<T> send(CallAct act, Object... messages) throws Throwable {
+		DefaultPromise promise = new DefaultPromise();
     	byte[] sessionID = new byte[]{0};
     	AbstractAct<?> srcAct = (AbstractAct<?>) this.getApplicationContext().getBean(act.getActName());
 		AbstractAct<?> cloneAct = (AbstractAct<?>) srcAct.clone();
@@ -72,9 +73,5 @@ public class DefaultClient extends AbstractEndpoint {
     	}
     	
     	return promise;
-    }
-    
-    public int remoteConnects() {
-    	return 1;
-    }
+	}
 }

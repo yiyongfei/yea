@@ -21,6 +21,7 @@ import org.springframework.util.StringUtils;
 
 import com.yea.core.exception.YeaException;
 import com.yea.core.remote.AbstractEndpoint;
+import com.yea.core.remote.client.ClientRegister;
 import com.yea.core.remote.promise.Promise;
 import com.yea.core.remote.struct.CallAct;
 import com.yea.shiro.constants.ShiroConstants;
@@ -84,7 +85,7 @@ public class ShiroFilterWrapper implements ApplicationContextAware {
      * @throws Exception
      */
     public void reset() throws Exception {
-    	if(isReset && endpoint != null && endpoint.remoteConnects() > 0) {
+    	if(isReset && endpoint != null && !ClientRegister.getInstance().getAllBalancingNode(endpoint.getRegisterName()).isEmpty()) {
     		DefaultFilterChainManager manager = (DefaultFilterChainManager) ((PathMatchingFilterChainResolver) ((AbstractShiroFilter)shiroFilterBean.getObject()).getFilterChainResolver()).getFilterChainManager();
     		// 清空初始权限配置
             manager.getFilterChains().clear();
