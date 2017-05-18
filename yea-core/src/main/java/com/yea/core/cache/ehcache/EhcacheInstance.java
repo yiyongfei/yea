@@ -29,6 +29,8 @@ import org.ehcache.config.units.MemoryUnit;
 import org.ehcache.expiry.Duration;
 import org.ehcache.expiry.Expirations;
 
+import com.yea.core.base.id.MongodbIDGennerator;
+
 /**
  * 
  * @author yiyongfei
@@ -40,7 +42,7 @@ public class EhcacheInstance {
 	private static Map<String, Cache> mapCache = new ConcurrentHashMap<String, Cache>();
 	static {
 		PersistentCacheManager persistentCacheManager = CacheManagerBuilder.newCacheManagerBuilder()
-				.with(CacheManagerBuilder.persistence("java.io.tmpdir")).build(true);
+				.with(CacheManagerBuilder.persistence("java.io.tmpdir." + MongodbIDGennerator.get().toHexString())).build(true);
 
 		/* Netty缓冲区缓存 */
 		CacheConfigurationBuilder<Serializable, Serializable> nettyConfiguration = CacheConfigurationBuilder
