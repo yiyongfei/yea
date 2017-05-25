@@ -20,7 +20,10 @@ import java.util.Date;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import com.yea.core.remote.AbstractEndpoint;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.yea.core.remote.AbstractPoint;
 import com.yea.core.remote.constants.RemoteConstants;
 
 /**
@@ -29,27 +32,40 @@ import com.yea.core.remote.constants.RemoteConstants;
  *
  */
 public abstract class AbstractBalancingNode extends BalancingNode {
-	private AbstractEndpoint endpoint = null;
+	private static final Logger LOGGER = LoggerFactory.getLogger(AbstractBalancingNode.class);
+	private AbstractPoint point = null;
 	protected Double hystrix;
     protected Double unwrite;
     protected Double slow;
     private Date slowdownTime;
 
-	public AbstractBalancingNode(AbstractEndpoint endpoint, SocketAddress remoteAddress){
+    public AbstractBalancingNode(AbstractPoint point, SocketAddress remoteAddress){
 		super(remoteAddress.toString());
-		this.endpoint = endpoint;
 		this.hystrix = 1.0;
     	this.unwrite = 1.0;
     	this.slow = 1.0;
     	this.slowdownTime = null;
     	this.setZone(getHost());
+		this.point = point;
     }
     
 	public boolean resetServerHealth() {
-		try{
-			return resetSlowHealth() || resetSendHealth() || resetHystrixHealth();
+		boolean _slow = false;
+		boolean _send = false;
+		boolean _hystrix = false;
+		try {
+			_slow = resetSlowHealth();
+			_send = resetSendHealth();
+			_hystrix = resetHystrixHealth();
+			if (_slow || _send || _hystrix) {
+				return true;
+			} else {
+				return false;
+			}
 		} finally {
 			this.setSuspended((hystrix * unwrite * slow) < 1);
+			LOGGER.info((_slow ? "重置慢权重," : "") + (_send ? "重置通道写权重," : "") + (_hystrix ? "重置熔断权重," : "")
+					+ "此时节点状态[是否有效:" + isAlive() + ",临时失效:" + isSuspended() + "]");
 		}
 	}
 	
@@ -61,6 +77,7 @@ public abstract class AbstractBalancingNode extends BalancingNode {
 		return false;
 	}
 	
+	@Deprecated
 	protected boolean resetSlowHealth() {
 		if(this.slowdownTime != null) {
     		if(new Date().getTime() - this.slowdownTime.getTime() > (9 * 1000)) {
@@ -105,6 +122,7 @@ public abstract class AbstractBalancingNode extends BalancingNode {
 			return false;
 		}
 	}
+	@Deprecated
 	protected boolean renewSlowHealth() {
 		slow = slow * 0.996;
 		slowdownTime = new Date();
@@ -115,8 +133,8 @@ public abstract class AbstractBalancingNode extends BalancingNode {
 		}
 	}
     
-    public AbstractEndpoint getEndpoint() {
-		return endpoint;
+    public AbstractPoint getPoint() {
+		return point;
 	}
     
     public abstract SocketAddress getLocalAddress();

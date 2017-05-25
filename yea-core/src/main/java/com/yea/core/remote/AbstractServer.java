@@ -25,7 +25,7 @@ import com.yea.core.remote.constants.RemoteConstants;
  * @author yiyongfei
  * 
  */
-public abstract class AbstractServer extends AbstractEndpoint {
+public abstract class AbstractServer extends AbstractPoint {
     private boolean isStop = false;//是否中止（如果外部请求服务中止，该值为true，如果因系统内部导致中止该值为false）
 	private boolean isBind = false;//是否连了服务端
     private boolean bindResult = false;//是否已连上服务端

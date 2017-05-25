@@ -24,9 +24,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
 
 import com.yea.core.base.act.AbstractAct;
+import com.yea.core.base.id.UUIDGenerator;
 import com.yea.core.exception.YeaException;
-import com.yea.core.loadbalancer.AbstractBalancingNode;
-import com.yea.core.remote.client.ClientRegister;
 import com.yea.core.remote.constants.RemoteConstants;
 import com.yea.core.remote.struct.Message;
 import com.yea.remote.netty.constants.NettyConstants;
@@ -54,14 +53,41 @@ public class ServiceClientHandler extends AbstractServiceHandler implements Nett
 		if (message.getHeader().getType() == RemoteConstants.MessageType.SERVICE_RESP.value()) {
 			long times = new Date().getTime() - ((Date)message.getHeader().getAttachment().get(NettyConstants.MessageHeaderAttachment.REQUEST_DATE.value())).getTime();
             if (times > NettyConstants.SLOW_LIMIT) {
-				//处理速度达到慢的限制，增加慢权重
-            	AbstractBalancingNode client = ClientRegister.getInstance().getBalancingNode(ctx.channel().localAddress(), ctx.channel().remoteAddress());
-				if (client != null) {
-					client.renewServerHealth(RemoteConstants.ServerHealthType.SLOW, 1.0);
-				}
-				LOGGER.warn(ctx.channel().localAddress() + "从" + ctx.channel().remoteAddress() + "接收到响应" + ", 共用时：" + (times) + "(耗时久，慢权重增加)，其中：请求用时：" + (((Date)message.getHeader().getAttachment().get(NettyConstants.MessageHeaderAttachment.REQUEST_RECIEVE_DATE.value())).getTime() - ((Date)message.getHeader().getAttachment().get(NettyConstants.MessageHeaderAttachment.REQUEST_DATE.value())).getTime()) + "，处理用时：" + (((Date)message.getHeader().getAttachment().get(NettyConstants.MessageHeaderAttachment.HEADER_DATE.value())).getTime() - ((Date)message.getHeader().getAttachment().get(NettyConstants.MessageHeaderAttachment.REQUEST_RECIEVE_DATE.value())).getTime()) + "，响应用时：" + (new Date().getTime() - ((Date)message.getHeader().getAttachment().get(NettyConstants.MessageHeaderAttachment.HEADER_DATE.value())).getTime()));
+            	LOGGER.warn("{}从{}接收到响应[请求标识:{}], 共用时：{}(耗时久)，其中：请求用时：{}，处理用时：{}，响应用时：{},消息长度:{}",
+						ctx.channel().localAddress(), ctx.channel().remoteAddress(),
+						UUIDGenerator.restore(message.getHeader().getSessionID()), times,
+						((Date) message.getHeader().getAttachment()
+								.get(NettyConstants.MessageHeaderAttachment.REQUEST_RECIEVE_DATE.value())).getTime()
+								- ((Date) message.getHeader().getAttachment()
+										.get(NettyConstants.MessageHeaderAttachment.REQUEST_DATE.value()))
+												.getTime(),
+						((Date) message.getHeader().getAttachment()
+								.get(NettyConstants.MessageHeaderAttachment.HEADER_DATE.value()))
+										.getTime()
+								- ((Date) message.getHeader().getAttachment()
+										.get(NettyConstants.MessageHeaderAttachment.REQUEST_RECIEVE_DATE.value()))
+												.getTime(),
+						new Date().getTime() - ((Date) message.getHeader().getAttachment()
+								.get(NettyConstants.MessageHeaderAttachment.HEADER_DATE.value())).getTime(),
+						message.getHeader().getLength());
 			} else {
-				LOGGER.debug(ctx.channel().localAddress() + "从" + ctx.channel().remoteAddress() + "接收到响应" + ", 共用时：" + (times) + "，其中：请求用时：" + (((Date)message.getHeader().getAttachment().get(NettyConstants.MessageHeaderAttachment.REQUEST_RECIEVE_DATE.value())).getTime() - ((Date)message.getHeader().getAttachment().get(NettyConstants.MessageHeaderAttachment.REQUEST_DATE.value())).getTime()) + "，处理用时：" + (((Date)message.getHeader().getAttachment().get(NettyConstants.MessageHeaderAttachment.HEADER_DATE.value())).getTime() - ((Date)message.getHeader().getAttachment().get(NettyConstants.MessageHeaderAttachment.REQUEST_RECIEVE_DATE.value())).getTime()) + "，响应用时：" + (new Date().getTime() - ((Date)message.getHeader().getAttachment().get(NettyConstants.MessageHeaderAttachment.HEADER_DATE.value())).getTime()));
+				LOGGER.info("{}从{}接收到响应[请求标识:{}], 共用时：{}，其中：请求用时：{}，处理用时：{}，响应用时：{},消息长度:{}",
+						ctx.channel().localAddress(), ctx.channel().remoteAddress(),
+						UUIDGenerator.restore(message.getHeader().getSessionID()), times,
+						((Date) message.getHeader().getAttachment()
+								.get(NettyConstants.MessageHeaderAttachment.REQUEST_RECIEVE_DATE.value())).getTime()
+								- ((Date) message.getHeader().getAttachment()
+										.get(NettyConstants.MessageHeaderAttachment.REQUEST_DATE.value()))
+												.getTime(),
+						((Date) message.getHeader().getAttachment()
+								.get(NettyConstants.MessageHeaderAttachment.HEADER_DATE.value()))
+										.getTime()
+								- ((Date) message.getHeader().getAttachment()
+										.get(NettyConstants.MessageHeaderAttachment.REQUEST_RECIEVE_DATE.value()))
+												.getTime(),
+						new Date().getTime() - ((Date) message.getHeader().getAttachment()
+								.get(NettyConstants.MessageHeaderAttachment.HEADER_DATE.value())).getTime(),
+						message.getHeader().getLength());
 			}
             
             if(message.getHeader().getAttachment().get(NettyConstants.MessageHeaderAttachment.CALL_ACT.value()) != null) {
@@ -79,7 +105,7 @@ public class ServiceClientHandler extends AbstractServiceHandler implements Nett
         obj = (ServiceClientHandler) super.clone();
         return obj;
     }
-
+    
     class InnerTask extends RecursiveAction {
     	private static final long serialVersionUID = 1L;
     	private ApplicationContext springContext;

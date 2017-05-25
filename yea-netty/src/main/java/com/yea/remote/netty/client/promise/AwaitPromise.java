@@ -21,8 +21,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import com.yea.core.exception.constants.YeaErrorMessage;
-import com.yea.core.loadbalancer.AbstractBalancingNode;
-import com.yea.core.remote.client.ClientRegister;
 import com.yea.core.remote.constants.RemoteConstants;
 import com.yea.core.remote.exception.RemoteException;
 import com.yea.core.remote.observer.Observable;
@@ -83,11 +81,6 @@ public class AwaitPromise<T> implements NettyChannelPromise<T>, Observer<T>, rx.
                         }
                         long endTime = new Date().getTime();
                         if(timeout > 0L && (endTime - startTime > timeout)) {
-                        	//处理速度达到慢的限制，降低慢权重
-                        	AbstractBalancingNode client = ClientRegister.getInstance().getBalancingNode(this.promise.channel().localAddress(), this.promise.channel().remoteAddress());
-            				if (client != null) {
-            					client.renewServerHealth(RemoteConstants.ServerHealthType.SLOW, 1.0);
-            				}
                             throw new RemoteException(YeaErrorMessage.ERR_FOUNDATION, RemoteConstants.ExceptionType.TIMEOUT.value() , promise.channel() + "获取数据超时！", null);
                         }
                     }
@@ -110,10 +103,6 @@ public class AwaitPromise<T> implements NettyChannelPromise<T>, Observer<T>, rx.
             TimeUnit.MILLISECONDS.sleep(50);
             long endTime = new Date().getTime();
             if(timeout > 0L && (endTime - startTime > timeout)) {
-            	AbstractBalancingNode client = ClientRegister.getInstance().getBalancingNode(this.promise.channel().localAddress(), this.promise.channel().remoteAddress());
-				if (client != null) {
-					client.renewServerHealth(RemoteConstants.ServerHealthType.SLOW, 1.0);
-				}
                 throw new RemoteException(YeaErrorMessage.ERR_FOUNDATION, RemoteConstants.ExceptionType.TIMEOUT.value() , promise.channel() + "获取数据超时！", null);
             }
             return awaitObject(startTime, timeout);

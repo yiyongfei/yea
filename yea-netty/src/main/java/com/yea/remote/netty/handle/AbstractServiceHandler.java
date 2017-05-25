@@ -67,4 +67,12 @@ public abstract class AbstractServiceHandler extends ChannelInboundHandlerObserv
     }
     
     protected abstract void execute(ChannelHandlerContext ctx, Message message) throws Exception;
+    
+
+//    @Override
+//    public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+//        boolean writable = ctx.channel().isWritable();
+//        ctx.channel().config().setOption(ChannelOption.AUTO_READ, writable);
+//        super.channelWritabilityChanged(ctx);
+//    }
 }

@@ -27,7 +27,7 @@ import com.yea.core.remote.struct.CallAct;
  * @author yiyongfei
  * 
  */
-public abstract class AbstractClient extends AbstractEndpoint {
+public abstract class AbstractClient extends AbstractPoint {
     private boolean isStop = false;//是否中止（如果外部请求服务中止，该值为true，如果因系统内部导致中止该值为false）
     private boolean isConnected = false;//是否连了服务端
     private boolean connectResult = false;//是否已连上服务端

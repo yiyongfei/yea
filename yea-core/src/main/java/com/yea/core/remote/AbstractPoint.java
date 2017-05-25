@@ -20,14 +20,12 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 
 import com.yea.core.dispatcher.DispatcherEndpoint;
-import com.yea.core.remote.promise.Promise;
-import com.yea.core.remote.struct.CallAct;
 
 /**
  * 
  * @author yiyongfei
  */
-public abstract class AbstractEndpoint implements ApplicationContextAware {
+public abstract class AbstractPoint implements ApplicationContextAware {
 	private String registerName;//服务注册名
 	private DispatcherEndpoint dispatcher;//服务调度中心，为null时不进行远程调度
     private String host;
@@ -69,6 +67,4 @@ public abstract class AbstractEndpoint implements ApplicationContextAware {
     public ApplicationContext getApplicationContext() {
         return context;
     }
-    
-    public abstract <T> Promise<T> send(CallAct act, Object... messages) throws Throwable;
 }
