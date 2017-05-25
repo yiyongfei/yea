@@ -15,13 +15,15 @@
  */
 package com.yea.shiro.web.scheduler;
 
+import java.util.concurrent.TimeUnit;
+
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import com.yea.core.util.ScheduledExecutor;
 import com.yea.shiro.web.wrapper.ShiroFilterWrapper;
 
 /**
@@ -36,14 +38,16 @@ public class ShiroFilterScheduler implements ApplicationContextAware {
 	private ApplicationContext context;
     public void setApplicationContext(ApplicationContext arg0) throws BeansException {
         context = arg0;
+        ScheduledExecutor.getScheduledExecutor().scheduleWithFixedDelay(new ShiroFilterRunnable(), 0, 30, TimeUnit.SECONDS);
     }
     
-    @Scheduled(cron="0/30 * * * * ?") //每30秒执行一次
-	public void scheduler() {
-		ShiroFilterWrapper shiroFilterWrapper = (ShiroFilterWrapper) context.getBean(ShiroFilterWrapper.class);
-		try {
-			shiroFilterWrapper.reset();
-		} catch (Exception e) {
+	class ShiroFilterRunnable implements Runnable {
+		public void run() {
+			ShiroFilterWrapper shiroFilterWrapper = (ShiroFilterWrapper) context.getBean(ShiroFilterWrapper.class);
+			try {
+				shiroFilterWrapper.reset();
+			} catch (Exception e) {
+			}
 		}
 	}
 }
