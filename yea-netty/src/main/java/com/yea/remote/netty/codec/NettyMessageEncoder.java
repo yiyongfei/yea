@@ -58,22 +58,22 @@ public final class NettyMessageEncoder extends MessageToByteEncoder<Message> imp
             sendBuf.writeByte((msg.getHeader().getResult()));//长度1字节
             
             if (msg.getHeader().getAttachment() != null) {
-                sendBuf.writeInt((msg.getHeader().getAttachment().size()));//长度4字节，附属内容的数目
+                sendBuf.writeShort((msg.getHeader().getAttachment().size()));//长度2字节，附属内容的数目
                 byte[] keyArray = null;
                 byte[] valueArray = null;
                 for (Map.Entry<String, Object> param : msg.getHeader().getAttachment().entrySet()) {
                     keyArray = param.getKey().getBytes("ISO-8859-1");
-                    sendBuf.writeInt(keyArray.length);
+                    sendBuf.writeShort(keyArray.length);
                     sendBuf.writeBytes(keyArray);
 
                     valueArray = serializer.serialize(param.getValue());
-                    sendBuf.writeInt(valueArray.length);
+                    sendBuf.writeShort(valueArray.length);
                     sendBuf.writeBytes(valueArray);
                 }
                 keyArray = null;
                 valueArray = null;
             } else {
-                sendBuf.writeInt(0);//长度4字节，附属内容的数目为0
+                sendBuf.writeShort(0);//长度2字节，附属内容的数目为0
             }
             
             if (msg.getBody() != null) {

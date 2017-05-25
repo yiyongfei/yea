@@ -20,6 +20,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -31,6 +32,7 @@ import com.yea.core.remote.struct.Header;
 import com.yea.core.remote.struct.Message;
 import com.yea.core.serializer.ISerializer;
 import com.yea.core.serializer.pool.SerializePool;
+import com.yea.remote.netty.constants.NettyConstants;
 import com.yea.remote.netty.handle.NettyChannelHandler;
 
 /**
@@ -65,15 +67,15 @@ public class NettyMessageDecoder extends LengthFieldBasedFrameDecoder implements
             header.setPriority(frame.readByte());
             header.setResult(frame.readByte());
             
-            int attachmentSize = frame.readInt();
+            int attachmentSize = frame.readShort();
             if (attachmentSize > 0) {
                 Map<String, Object> attachment = new HashMap<String, Object>();
                 byte[] keyArray = null;
                 byte[] valueArray = null;
                 for (int i = 0; i < attachmentSize; i++) {
-                    keyArray = new byte[frame.readInt()];
+                    keyArray = new byte[frame.readShort()];
                     frame.readBytes(keyArray);
-                    valueArray = new byte[frame.readInt()];
+                    valueArray = new byte[frame.readShort()];
                     frame.readBytes(valueArray);
 
                     attachment.put(new String(keyArray, "ISO-8859-1"), serializer.deserialize(valueArray));
@@ -81,7 +83,10 @@ public class NettyMessageDecoder extends LengthFieldBasedFrameDecoder implements
                 keyArray = null;
                 valueArray = null;
                 header.setAttachment(attachment);
+            } else {
+            	header.setAttachment(new HashMap<String, Object>());
             }
+            header.getAttachment().put(NettyConstants.MessageHeaderAttachment.RECIEVE_DATE.value(), new Date());
             message.setHeader(header);
             
             if (frame.readableBytes() > 4) {
