@@ -110,7 +110,7 @@ public class ResponseTimeWeightedRule extends RoundRobinRule {
             serverWeightTimer.cancel();
         }
         serverWeightTimer = new Timer("NFLoadBalancer-serverWeightTimer-"
-                + name, true);
+                + name, false);
         serverWeightTimer.schedule(new DynamicServerWeightTask(), 0,
                 serverWeightTaskTimerInterval);
         // do a initial run

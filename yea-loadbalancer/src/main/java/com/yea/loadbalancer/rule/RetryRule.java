@@ -106,7 +106,7 @@ public class RetryRule extends AbstractLoadBalancerRule {
 
 class InterruptTask extends TimerTask {
 	
-	static Timer timer = new Timer("InterruptTimer", true); 
+	static Timer timer = new Timer("InterruptTimer", false); 
 	
 	protected Thread target = null;
 

@@ -35,7 +35,7 @@ public class PollingServerListUpdater implements INodeListUpdater {
 		static {
 			int coreSize = 2;
 			ThreadFactory factory = (new ThreadFactoryBuilder()).setNameFormat("PollingServerListUpdater-%d")
-					.setDaemon(true).build();
+					.setDaemon(false).build();
 			_serverListRefreshExecutor = new ScheduledThreadPoolExecutor(coreSize, factory);
 			_shutdownThread = new Thread(new Runnable() {
 				public void run() {
