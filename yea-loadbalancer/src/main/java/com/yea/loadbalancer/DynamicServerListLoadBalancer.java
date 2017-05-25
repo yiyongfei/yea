@@ -226,12 +226,6 @@ public class DynamicServerListLoadBalancer<T extends BalancingNode> extends Base
 		// other threads might be doing this - in which case, we pass
 		if (serverListUpdateInProgress.compareAndSet(false, true)) {
 			try {
-				for (T s : ls) {
-					s.setAlive(true); // set so that clients can start using
-										// these
-										// servers right away instead
-										// of having to wait out the ping cycle.
-				}
 				setNodesList(ls);
 				super.forceQuickPing();
 			} finally {
