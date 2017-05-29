@@ -18,7 +18,6 @@ package com.yea.dispatcher.netty.handle;
 import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -130,8 +129,7 @@ public class DispatchServerHandler extends ChannelInboundHandlerAdapter implemen
         header.setType(messageType.value());
         header.setSessionID(sessionID);
         header.setResult(RemoteConstants.MessageResult.SUCCESS.value());
-        header.setAttachment(new HashMap<String, Object>());
-        header.getAttachment().put(NettyConstants.MessageHeaderAttachment.HEADER_DATE.value(), new Date());
+        header.addAttachment(NettyConstants.MessageHeaderAttachment.HEADER_DATE.value(), new Date());
         message.setHeader(header);
         message.setBody(body);
         return message;

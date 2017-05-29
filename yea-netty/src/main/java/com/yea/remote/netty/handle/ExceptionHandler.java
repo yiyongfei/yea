@@ -16,7 +16,6 @@
 package com.yea.remote.netty.handle;
 
 import java.util.Date;
-import java.util.HashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -86,11 +85,10 @@ public class ExceptionHandler extends ChannelInboundHandlerObservable implements
         header.setType(RemoteConstants.MessageType.SERVICE_RESP.value());
         header.setSessionID(sessionID);
         header.setResult(result);
-        header.setAttachment(new HashMap<String, Object>());
-        header.getAttachment().put(NettyConstants.MessageHeaderAttachment.CALL_ACT.value(), act == null || act.trim().length() == 0 ? null : act);
-        header.getAttachment().put(NettyConstants.MessageHeaderAttachment.REQUEST_DATE.value(), reqDate);
-        header.getAttachment().put(NettyConstants.MessageHeaderAttachment.REQUEST_RECIEVE_DATE.value(), reqRecieveDate);
-        header.getAttachment().put(NettyConstants.MessageHeaderAttachment.HEADER_DATE.value(), new Date());
+        header.addAttachment(NettyConstants.MessageHeaderAttachment.CALL_ACT.value(), act == null || act.trim().length() == 0 ? null : act);
+        header.addAttachment(NettyConstants.MessageHeaderAttachment.REQUEST_DATE.value(), reqDate);
+        header.addAttachment(NettyConstants.MessageHeaderAttachment.REQUEST_RECIEVE_DATE.value(), reqRecieveDate);
+        header.addAttachment(NettyConstants.MessageHeaderAttachment.HEADER_DATE.value(), new Date());
         message.setHeader(header);
         message.setBody(body);
         return message;

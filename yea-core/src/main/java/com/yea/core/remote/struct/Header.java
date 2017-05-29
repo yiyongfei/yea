@@ -15,9 +15,12 @@
  */
 package com.yea.core.remote.struct;
 
+import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
 
 import com.yea.core.base.id.UUIDGenerator;
+import com.yea.core.remote.exception.RemoteException;
 
 /**
  * 
@@ -31,7 +34,8 @@ public final class Header {
     private byte type;// 消息类型
     private byte priority;// 消息优先级
     private byte result;// 消息结果
-    private Map<String, Object> attachment;// 消息附属内容
+    private long date;// 消息Encode时间
+    private Map<String, Object> attachment = new HashMap<String, Object>();// 消息附属内容
     /**
      * @return the crcCode
      */
@@ -115,12 +119,23 @@ public final class Header {
         this.result = result;
     }
 
-    public Map<String, Object> getAttachment() {
+    public long getDate() {
+		return date;
+	}
+
+	public void setDate(long date) {
+		this.date = date;
+	}
+
+	public Map<String, Object> getAttachment() {
         return attachment;
     }
 
-    public void setAttachment(Map<String, Object> attachment) {
-        this.attachment = attachment;
+    public void addAttachment(String key, Object value) {
+    	if(this.attachment.size() >= Byte.MAX_VALUE) {
+    		throw new RemoteException("Header域里的附属信息个数不能超出" + Byte.MAX_VALUE);
+    	}
+        this.attachment.put(key, value);
     }
 
     /*
@@ -136,7 +151,8 @@ public final class Header {
         stringBuffer.append("sessionID=").append(UUIDGenerator.restore(sessionID)).append(", ");
         stringBuffer.append("type=").append(type).append(", ");
         stringBuffer.append("priority=").append(priority).append(", ");
-        stringBuffer.append("result=").append(result);
+        stringBuffer.append("result=").append(result).append(", ");
+		stringBuffer.append("date=").append(new Date(date));
         if (getAttachment() != null && getAttachment().size() > 0) {
             stringBuffer.append(", ").append("Attachment=[");
             for (Map.Entry<String, Object> param : getAttachment().entrySet()) {

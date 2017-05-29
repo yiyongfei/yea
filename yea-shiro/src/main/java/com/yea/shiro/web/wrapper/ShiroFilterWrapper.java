@@ -21,7 +21,6 @@ import org.springframework.util.StringUtils;
 
 import com.yea.core.exception.YeaException;
 import com.yea.core.remote.AbstractEndpoint;
-import com.yea.core.remote.client.ClientRegister;
 import com.yea.core.remote.promise.Promise;
 import com.yea.core.remote.struct.CallAct;
 import com.yea.shiro.constants.ShiroConstants;
@@ -84,24 +83,25 @@ public class ShiroFilterWrapper implements ApplicationContextAware {
      * 重新初始化过滤器，用于更改URL过滤器配置后对其的重置
      * @throws Exception
      */
-    public void reset() throws Exception {
-    	if(isReset && endpoint != null && !ClientRegister.getInstance().getAllBalancingNode(endpoint.getRegisterName()).isEmpty()) {
-    		DefaultFilterChainManager manager = (DefaultFilterChainManager) ((PathMatchingFilterChainResolver) ((AbstractShiroFilter)shiroFilterBean.getObject()).getFilterChainResolver()).getFilterChainManager();
-    		// 清空初始权限配置
-            manager.getFilterChains().clear();
-            _resetFilterChainDefinition(endpoint);
-            _resetFilter();
-            manager.getFilters().putAll(shiroFilterBean.getFilters());
-            Map<String, String> chains = shiroFilterBean.getFilterChainDefinitionMap();
-            for (Map.Entry<String, String> entry : chains.entrySet()) {
-                String url = entry.getKey();
-                String chainDefinition = entry.getValue().trim().replace(" ", "");
-                manager.createChain(url, chainDefinition);
-            }
-            endResetTime = new Date().getTime();
-            isReset = false;
-    	}
-    }
+	public void reset() throws Exception {
+		if (isReset && endpoint != null && !endpoint.getBalancingNodes().isEmpty()) {
+			DefaultFilterChainManager manager = (DefaultFilterChainManager) ((PathMatchingFilterChainResolver) ((AbstractShiroFilter) shiroFilterBean
+					.getObject()).getFilterChainResolver()).getFilterChainManager();
+			// 清空初始权限配置
+			manager.getFilterChains().clear();
+			_resetFilterChainDefinition(endpoint);
+			_resetFilter();
+			manager.getFilters().putAll(shiroFilterBean.getFilters());
+			Map<String, String> chains = shiroFilterBean.getFilterChainDefinitionMap();
+			for (Map.Entry<String, String> entry : chains.entrySet()) {
+				String url = entry.getKey();
+				String chainDefinition = entry.getValue().trim().replace(" ", "");
+				manager.createChain(url, chainDefinition);
+			}
+			endResetTime = new Date().getTime();
+			isReset = false;
+		}
+	}
 	
 	private void _resetFilterChainDefinition(AbstractEndpoint nettyClient) {
 		shiroFilterBean.getFilterChainDefinitionMap().clear();

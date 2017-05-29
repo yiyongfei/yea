@@ -21,8 +21,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
@@ -66,27 +64,45 @@ public class NettyMessageDecoder extends LengthFieldBasedFrameDecoder implements
             header.setType(frame.readByte());
             header.setPriority(frame.readByte());
             header.setResult(frame.readByte());
+            long basedate = frame.readLong();
             
-            int attachmentSize = frame.readShort();
+            int attachmentSize = frame.readByte();
             if (attachmentSize > 0) {
-                Map<String, Object> attachment = new HashMap<String, Object>();
-                byte[] keyArray = null;
-                byte[] valueArray = null;
-                for (int i = 0; i < attachmentSize; i++) {
-                    keyArray = new byte[frame.readShort()];
-                    frame.readBytes(keyArray);
-                    valueArray = new byte[frame.readShort()];
-                    frame.readBytes(valueArray);
-
-                    attachment.put(new String(keyArray, "ISO-8859-1"), serializer.deserialize(valueArray));
+                attachmentSize = frame.readByte();//非Date类型的附属信息
+                if(attachmentSize > 0) {
+                	byte[] keyArray = null;
+                    byte[] valueArray = null;
+                	for (int i = 0; i < attachmentSize; i++) {
+                        keyArray = new byte[frame.readShort()];
+                        frame.readBytes(keyArray);
+                        valueArray = new byte[frame.readShort()];
+                        frame.readBytes(valueArray);
+                        
+                        header.addAttachment(new String(keyArray, "ISO-8859-1"), serializer.deserialize(valueArray));
+                    }
                 }
-                keyArray = null;
-                valueArray = null;
-                header.setAttachment(attachment);
-            } else {
-            	header.setAttachment(new HashMap<String, Object>());
+                attachmentSize = frame.readByte();//Date类型的附属信息
+                if(attachmentSize > 0) {
+                	byte[] keyArray = null;
+                	byte length = 0;
+                	for (int i = 0; i < attachmentSize; i++) {
+                        keyArray = new byte[frame.readShort()];
+                        frame.readBytes(keyArray);
+                        length = frame.readByte();
+                        if(length == 1) {
+                        	header.addAttachment(new String(keyArray, "ISO-8859-1"), new Date(basedate - frame.readByte()));
+                        } else if (length == 2) {
+                        	header.addAttachment(new String(keyArray, "ISO-8859-1"), new Date(basedate - frame.readShort()));
+                        } else if (length == 4) {
+                        	header.addAttachment(new String(keyArray, "ISO-8859-1"), new Date(basedate - frame.readInt()));
+                        } else {
+                        	header.addAttachment(new String(keyArray, "ISO-8859-1"), new Date(basedate - frame.readLong()));
+                        }
+                    }
+                }
             }
-            header.getAttachment().put(NettyConstants.MessageHeaderAttachment.RECIEVE_DATE.value(), new Date());
+			header.addAttachment(NettyConstants.MessageHeaderAttachment.SEND_DATE.value(), new Date(basedate));
+			header.addAttachment(NettyConstants.MessageHeaderAttachment.RECIEVE_DATE.value(), new Date());
             message.setHeader(header);
             
             if (frame.readableBytes() > 4) {

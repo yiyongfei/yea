@@ -52,8 +52,8 @@ public class ServiceClientHandler extends AbstractServiceHandler implements Nett
 		// TODO Auto-generated method stub
 		if (message.getHeader().getType() == RemoteConstants.MessageType.SERVICE_RESP.value()) {
 			long times = new Date().getTime() - ((Date)message.getHeader().getAttachment().get(NettyConstants.MessageHeaderAttachment.REQUEST_DATE.value())).getTime();
-            if (times > NettyConstants.SLOW_LIMIT) {
-            	LOGGER.warn("{}从{}接收到响应[请求标识:{}], 共用时：{}(耗时久)，其中：请求用时：{}，处理用时：{}，响应用时：{},消息长度:{}",
+			if (times > NettyConstants.SLOW_LIMIT) {
+				LOGGER.warn("{}从{}接收到响应[请求标识:{}], 共用时：{}(耗时久)，其中：请求用时：{}(传输用时:{})，处理用时：{}，响应用时：{}(传输用时:{}),消息长度:{}",
 						ctx.channel().localAddress(), ctx.channel().remoteAddress(),
 						UUIDGenerator.restore(message.getHeader().getSessionID()), times,
 						((Date) message.getHeader().getAttachment()
@@ -62,16 +62,25 @@ public class ServiceClientHandler extends AbstractServiceHandler implements Nett
 										.get(NettyConstants.MessageHeaderAttachment.REQUEST_DATE.value()))
 												.getTime(),
 						((Date) message.getHeader().getAttachment()
+								.get(NettyConstants.MessageHeaderAttachment.REQUEST_RECIEVE_DATE.value())).getTime()
+								- ((Date) message.getHeader().getAttachment()
+										.get(NettyConstants.MessageHeaderAttachment.REQUEST_SEND_DATE.value()))
+												.getTime(),
+						((Date) message.getHeader().getAttachment()
 								.get(NettyConstants.MessageHeaderAttachment.HEADER_DATE.value()))
 										.getTime()
 								- ((Date) message.getHeader().getAttachment()
 										.get(NettyConstants.MessageHeaderAttachment.REQUEST_RECIEVE_DATE.value()))
 												.getTime(),
+						new Date().getTime()
+								- ((Date) message.getHeader().getAttachment()
+										.get(NettyConstants.MessageHeaderAttachment.HEADER_DATE.value()))
+												.getTime(),
 						new Date().getTime() - ((Date) message.getHeader().getAttachment()
-								.get(NettyConstants.MessageHeaderAttachment.HEADER_DATE.value())).getTime(),
+								.get(NettyConstants.MessageHeaderAttachment.SEND_DATE.value())).getTime(),
 						message.getHeader().getLength());
 			} else {
-				LOGGER.info("{}从{}接收到响应[请求标识:{}], 共用时：{}，其中：请求用时：{}，处理用时：{}，响应用时：{},消息长度:{}",
+				LOGGER.info("{}从{}接收到响应[请求标识:{}], 共用时：{}，其中：请求用时：{}(传输用时:{})，处理用时：{}，响应用时：{}(传输用时:{}),消息长度:{}",
 						ctx.channel().localAddress(), ctx.channel().remoteAddress(),
 						UUIDGenerator.restore(message.getHeader().getSessionID()), times,
 						((Date) message.getHeader().getAttachment()
@@ -80,13 +89,25 @@ public class ServiceClientHandler extends AbstractServiceHandler implements Nett
 										.get(NettyConstants.MessageHeaderAttachment.REQUEST_DATE.value()))
 												.getTime(),
 						((Date) message.getHeader().getAttachment()
+								.get(NettyConstants.MessageHeaderAttachment.REQUEST_RECIEVE_DATE.value())).getTime()
+								- ((Date) message.getHeader().getAttachment()
+										.get(NettyConstants.MessageHeaderAttachment.REQUEST_SEND_DATE.value()))
+												.getTime(),
+						((Date) message.getHeader().getAttachment()
 								.get(NettyConstants.MessageHeaderAttachment.HEADER_DATE.value()))
 										.getTime()
 								- ((Date) message.getHeader().getAttachment()
 										.get(NettyConstants.MessageHeaderAttachment.REQUEST_RECIEVE_DATE.value()))
 												.getTime(),
 						new Date().getTime() - ((Date) message.getHeader().getAttachment()
-								.get(NettyConstants.MessageHeaderAttachment.HEADER_DATE.value())).getTime(),
+								.get(NettyConstants.MessageHeaderAttachment.HEADER_DATE.value()))
+										.getTime(),
+						new Date().getTime()
+								- ((Date) message.getHeader().getAttachment()
+										.get(NettyConstants.MessageHeaderAttachment.HEADER_DATE.value()))
+												.getTime(),
+						new Date().getTime() - ((Date) message.getHeader().getAttachment()
+								.get(NettyConstants.MessageHeaderAttachment.SEND_DATE.value())).getTime(),
 						message.getHeader().getLength());
 			}
             

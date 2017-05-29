@@ -49,9 +49,16 @@ public class NoOpLoadBalancer extends AbstractLoadBalancer {
         return Collections.emptyList();
     }
 
+
+	@Override
+	public void markNodeDown(BalancingNode node) {
+		// TODO Auto-generated method stub
+		logger.info("markServerDown to NoOpLoadBalancer ignored");
+	}
+	
     @Override
-    public void markNodeDown(BalancingNode server) {
-        logger.info("markServerDown to NoOpLoadBalancer ignored");
+    public void confirmNodeDown(BalancingNode server) {
+        logger.info("confirmNodeDown to NoOpLoadBalancer ignored");
     }
 
 	@Override
@@ -78,9 +85,16 @@ public class NoOpLoadBalancer extends AbstractLoadBalancer {
 	}
 
 	@Override
+	public Collection<BalancingNode> chooseNode(SocketAddress address, boolean availableOnly) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	
+	@Override
 	public boolean contains(SocketAddress address) {
 		// TODO Auto-generated method stub
 		return false;
 	}
+
 
 }

@@ -15,6 +15,7 @@ import com.yea.core.loadbalancer.INodeStatusChangeListener;
 import com.yea.core.loadbalancer.IPing;
 import com.yea.core.loadbalancer.IPingStrategy;
 import com.yea.core.loadbalancer.IRule;
+import com.yea.core.loadbalancer.ServerComparator;
 import com.yea.loadbalancer.config.CommonClientConfigKey;
 import com.yea.loadbalancer.config.IClientConfig;
 import com.yea.loadbalancer.rule.RoundRobinRule;
@@ -142,6 +143,7 @@ public class BaseLoadBalancer extends AbstractLoadBalancer implements IClientCon
 		initWithConfig(config, rule, ping);
 	}
 
+	@SuppressWarnings("deprecation")
 	void initWithConfig(IClientConfig clientConfig, IRule rule, IPing ping) {
 		this.config = clientConfig;
 		String clientName = clientConfig.getClientName();
@@ -169,6 +171,7 @@ public class BaseLoadBalancer extends AbstractLoadBalancer implements IClientCon
 
 	}
 
+	@SuppressWarnings("deprecation")
 	@Override
 	public void initWithNiwsConfig(IClientConfig clientConfig) {
 		String ruleClassName = (String) clientConfig.getProperty(CommonClientConfigKey.NFLoadBalancerRuleClassName);
@@ -228,7 +231,7 @@ public class BaseLoadBalancer extends AbstractLoadBalancer implements IClientCon
 		if (lbTimer != null) {
 			lbTimer.cancel();
 		}
-		lbTimer = new ShutdownEnabledTimer("NFLoadBalancer-PingTimer-" + name, true);
+		lbTimer = new ShutdownEnabledTimer("NFLoadBalancer-PingTimer-" + name, false);
 		lbTimer.schedule(new PingTask(), 0, pingIntervalSeconds * 1000);
 		forceQuickPing();
 	}
@@ -457,6 +460,7 @@ public class BaseLoadBalancer extends AbstractLoadBalancer implements IClientCon
 	 * Set the list of servers used as the server pool. This overrides existing
 	 * server list.
 	 */
+	@SuppressWarnings("rawtypes")
 	public void setNodesList(Collection lsrv) {
 		Lock writeLock = allServerLock.writeLock();
 		logger.debug("LoadBalancer [{}]: clearing server list (SET op)", name);
@@ -767,13 +771,25 @@ public class BaseLoadBalancer extends AbstractLoadBalancer implements IClientCon
 	/**
 	 * 增加方法：基于远程服务器的地址直接获取节点
 	 */
+	@Override
 	public Collection<BalancingNode> chooseNode(SocketAddress address) {
+		return chooseNode(address, true);
+	}
+
+	@Override
+	public Collection<BalancingNode> chooseNode(SocketAddress address, boolean availableOnly) {
 		Collection<BalancingNode> tmp = new ArrayList<BalancingNode>();
 		Iterator<BalancingNode> it = allServerList.iterator();
 		while (it.hasNext()) {
 			BalancingNode node = it.next();
 			if (node.getSocketAddress().equals(address)) {
-				tmp.add(node);
+				if (availableOnly) {
+					if (node.isAlive()) {
+						tmp.add(node);
+					}
+				} else {
+					tmp.add(node);
+				}
 			}
 		}
 		return tmp;
@@ -786,7 +802,7 @@ public class BaseLoadBalancer extends AbstractLoadBalancer implements IClientCon
 		Iterator<BalancingNode> it = this.allServerList.iterator();
 		while (it.hasNext()) {
 			BalancingNode node = it.next();
-			if (node.getSocketAddress().equals(address)) {
+			if (node.getSocketAddress().equals(address) && !node.isDown()) {
 				return true;
 			}
 		}
@@ -797,43 +813,45 @@ public class BaseLoadBalancer extends AbstractLoadBalancer implements IClientCon
 	 * 标记服务Down
 	 */
 	public void markNodeDown(BalancingNode server) {
-		if (server == null || !server.isAlive()) {
+		if (server == null || server.isDown()) {
 			return;
 		}
-
-		logger.error("LoadBalancer [{}]:  markServerDown called on [{}]", name, server.getId());
 		server.setAlive(false);
-
+		server.setDown(true);
+	}
+	
+	/**
+	 * 确定服务Down(真实下线)
+	 */
+	public void confirmNodeDown(BalancingNode server) {
+		if (server == null) {
+			return;
+		}
+		markNodeDown(server);
+		logger.error("LoadBalancer [{}]:  confirmNodeDown called on [{}]", name, server.getId());
 		notifyServerStatusChangeListener(singleton(server));
+		Collection<BalancingNode> servers = new ArrayList<BalancingNode>();
+		for (BalancingNode node : allServerList) {
+			if (!node.getId().equals(server.getId())) {
+				servers.add(node);
+			}
+		}
+		setNodesList(servers);
 	}
 
-	public void markNodeDown(String id) {
-		boolean triggered = false;
-
+	public void confirmNodeDown(String id) {
 		id = BalancingNode.normalizeId(id);
-
 		if (id == null) {
 			return;
 		}
-
 		Lock writeLock = upServerLock.writeLock();
 		writeLock.lock();
 		try {
-			final Collection<BalancingNode> changedServers = new ArrayList<BalancingNode>();
-
 			for (BalancingNode svr : upServerList) {
-				if (svr.isAlive() && (svr.getId().equals(id))) {
-					triggered = true;
-					svr.setAlive(false);
-					changedServers.add(svr);
+				if (svr.getId().equals(id)) {
+					confirmNodeDown(svr);
 				}
 			}
-
-			if (triggered) {
-				logger.error("LoadBalancer [{}]:  markServerDown called for server [{}]", name, id);
-				notifyServerStatusChangeListener(changedServers);
-			}
-
 		} finally {
 			writeLock.unlock();
 		}

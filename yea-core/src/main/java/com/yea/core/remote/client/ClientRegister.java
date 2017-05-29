@@ -15,17 +15,16 @@
  */
 package com.yea.core.remote.client;
 
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.TimeUnit;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.yea.core.loadbalancer.AbstractBalancingNode;
 import com.yea.core.loadbalancer.BalancingNode;
@@ -33,18 +32,40 @@ import com.yea.core.remote.AbstractEndpoint;
 import com.yea.core.remote.exception.RemoteException;
 import com.yea.core.remote.promise.Promise;
 import com.yea.core.remote.struct.CallAct;
+import com.yea.core.util.ScheduledExecutor;
 
 @SuppressWarnings("rawtypes")
 public class ClientRegister<T> {
+	private static final Logger LOGGER = LoggerFactory.getLogger(ClientRegister.class);
 	private Map<String, AbstractEndpoint> mapEndpoint = null;
-	private Map<String, List<AbstractBalancingNode>> mapBalancingNode = null;
 	private Map<String, Set<String>> mapActName = null;
+	private int _RefreshInterval = 30 * 1000;
+	private Runnable _RefreshRunnable = null;
 
 	private ClientRegister() {
 		mapEndpoint = new ConcurrentHashMap<String, AbstractEndpoint>();
-		mapBalancingNode = new ConcurrentHashMap<String, List<AbstractBalancingNode>>();
 		mapActName = new ConcurrentHashMap<String, Set<String>>();
-		scheduledDistribution();
+		
+		_RefreshRunnable = new Runnable() {
+			public void run() {
+				try {
+					LOGGER.debug("开始检查节点的健康度[检查项:写通道、熔断]");
+					for (AbstractEndpoint endpoint : mapEndpoint.values()) {
+						if (endpoint.getBalancingNodes().isEmpty()) {
+							continue;
+						}
+						for (BalancingNode node : endpoint.getBalancingNodes()) {
+							if (node.isSuspended()) {
+								((AbstractBalancingNode) node).resetServerHealth();
+							}
+						}
+					}
+				} catch (Exception e) {
+				}
+			}
+		};
+		
+		ScheduledExecutor.getScheduledExecutor().scheduleWithFixedDelay(_RefreshRunnable, 60 * 1000, _RefreshInterval, TimeUnit.MILLISECONDS);
 	}
 
 	public Promise<T> send(CallAct act, Object... messages) throws Throwable {
@@ -81,55 +102,15 @@ public class ClientRegister<T> {
 			mapEndpoint.put(registerName, endpoint);
 		}
 	}
-	
-	public void registerBalancingNode(String registerName, AbstractBalancingNode node) {
-		if (node != null) {
-			if (!mapBalancingNode.containsKey(registerName)) {
-				mapBalancingNode.put(registerName, new CopyOnWriteArrayList<AbstractBalancingNode>());
-			}
-			mapBalancingNode.get(registerName).add(node);
-		}
+
+	public AbstractEndpoint getEndpoint(String registerName) {
+		return mapEndpoint.get(registerName);
 	}
 	
-	public void unregisterBalancingNode(String registerName, AbstractBalancingNode node) {
-		if (node != null && mapBalancingNode.containsKey(registerName)) {
-			Iterator<AbstractBalancingNode> it = mapBalancingNode.get(registerName).iterator();
-			BalancingNode tmp;
-			while(it.hasNext()) {
-				tmp = it.next();
-				if(tmp.getSocketAddress().equals(node.getSocketAddress())) {
-					mapBalancingNode.get(registerName).remove(tmp);
-				}
-			}
-		}
-	}
-	
-	public List<BalancingNode> getAllBalancingNode(String registerName) {
-		List<BalancingNode> list = new CopyOnWriteArrayList<BalancingNode>();
-		if(mapBalancingNode.containsKey(registerName)) {
-			list.addAll(mapBalancingNode.get(registerName));
-		}
-		return list;
-	}
-	
-	public AbstractBalancingNode getBalancingNode(String registerName, SocketAddress remote) {
-		if(mapBalancingNode.containsKey(registerName)) {
-			List<AbstractBalancingNode> listBalancingNode = mapBalancingNode.get(registerName);
-			for(AbstractBalancingNode node : listBalancingNode) {
-				if(node.getSocketAddress().equals(remote)) {
-					return node;
-				}
-			}
-		}
-		return null;
-	}
-	
-	public AbstractBalancingNode getBalancingNode(SocketAddress local, SocketAddress remote) {
-		for(List<AbstractBalancingNode> listBalancingNode : mapBalancingNode.values()) {
-			for(AbstractBalancingNode node : listBalancingNode) {
-				if(node.getLocalAddress().equals(local) && node.getSocketAddress().equals(remote)) {
-					return node;
-				}
+	public AbstractEndpoint getEndpoint(SocketAddress local) {
+		for (AbstractEndpoint endpoint : mapEndpoint.values()) {
+			if (new InetSocketAddress(endpoint.getHost(), endpoint.getPort()).equals(local)) {
+				return endpoint;
 			}
 		}
 		return null;
@@ -155,35 +136,4 @@ public class ClientRegister<T> {
 		private static final ClientRegister SINGLETON = new ClientRegister();
 	}
 	
-	private final ExecutorService executor = Executors.newSingleThreadExecutor();
-	private final AtomicBoolean scheduled = new AtomicBoolean(false);
-	private void scheduledDistribution() {
-		if (scheduled.compareAndSet(false, true)) {
-			executor.execute(resetHealthRunnable);
-		}
-	}
-	
-	private final Runnable resetHealthRunnable = new Runnable() {
-		@Override
-		public void run() {
-			while (true) {
-				try {
-					for(List<AbstractBalancingNode> listBalancingNode : mapBalancingNode.values()) {
-						if (listBalancingNode.size() == 0) {
-							scheduled.set(false);
-							break;
-						}
-						for (AbstractBalancingNode node : listBalancingNode) {
-							if(node.isSuspended()) {
-								node.resetServerHealth();
-							}
-						}
-					}
-					
-					Thread.sleep(200);
-				} catch (Exception e) {
-				}
-			}
-		}
-	};
 }

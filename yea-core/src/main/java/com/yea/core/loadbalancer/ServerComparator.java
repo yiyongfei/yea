@@ -1,9 +1,7 @@
-package com.yea.loadbalancer;
+package com.yea.core.loadbalancer;
 
 import java.io.Serializable;
 import java.util.Comparator;
-
-import com.yea.core.loadbalancer.BalancingNode;
 
 /**
  * Class to help establishing equality for Hash/Key operations.

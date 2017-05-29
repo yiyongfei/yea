@@ -3,28 +3,21 @@ package com.yea.loadbalancer.rule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.yea.core.base.id.UUIDGenerator;
-import com.yea.core.hash.DefaultHashAlgorithm;
 import com.yea.core.hash.HashAlgorithm;
 import com.yea.core.loadbalancer.BalancingNode;
 import com.yea.core.loadbalancer.ILoadBalancer;
+import com.yea.core.loadbalancer.ServerComparator;
+import com.yea.core.util.ScheduledExecutor;
 import com.yea.loadbalancer.AbstractLoadBalancer;
-import com.yea.loadbalancer.AbstractLoadBalancerRule;
-import com.yea.loadbalancer.BaseLoadBalancer;
 import com.yea.loadbalancer.LoadBalancerStats;
-import com.yea.loadbalancer.ServerComparator;
 import com.yea.loadbalancer.ServerStats;
 import com.yea.loadbalancer.config.IClientConfig;
 import com.yea.loadbalancer.config.IClientConfigKey;
 
-import java.io.UnsupportedEncodingException;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
-import java.util.SortedMap;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -35,7 +28,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @author yiyongfei
  *
  */
-public class WeightedHashRule extends AbstractLoadBalancerRule {
+public class WeightedHashRule extends HashRule {
 
 	public static final IClientConfigKey<Integer> WEIGHT_TASK_TIMER_INTERVAL_CONFIG_KEY = new IClientConfigKey<Integer>() {
 		@Override
@@ -60,181 +53,31 @@ public class WeightedHashRule extends AbstractLoadBalancerRule {
 
 	private static final Logger logger = LoggerFactory.getLogger(WeightedHashRule.class);
 
-	private volatile Map<BalancingNode, Double> accumulatedWeights = new ConcurrentSkipListMap<BalancingNode, Double>();
-
-	protected Timer serverWeightTimer = null;
-
+	protected Map<BalancingNode, Double> accumulatedWeights = new ConcurrentSkipListMap<BalancingNode, Double>();
+	
 	protected AtomicBoolean serverWeightAssignmentInProgress = new AtomicBoolean(false);
-
-	String name = "unknown";
-
+	
 	public WeightedHashRule() {
 		super();
+		ScheduledExecutor.getScheduledExecutor().scheduleWithFixedDelay(new DynamicServerWeightRunnable(), 2 * 1000,
+				serverWeightTaskTimerInterval, TimeUnit.MILLISECONDS);
 	}
 
 	public WeightedHashRule(ILoadBalancer lb) {
-		this();
-		setLoadBalancer(lb);
+		super(lb);
 	}
 
 	public WeightedHashRule setHashAlgorithm(HashAlgorithm hashAlgorithm) {
-		this.hashAlg = hashAlgorithm;
+		super.setHashAlgorithm(hashAlgorithm);
 		return this;
 	}
 
 	public WeightedHashRule setRepetitions(Integer repetitions) {
-		this.repetitions = repetitions;
+		super.setRepetitions(repetitions);
 		return this;
 	}
-
-	@Override
-	public void setLoadBalancer(ILoadBalancer lb) {
-		super.setLoadBalancer(lb);
-		if (lb instanceof BaseLoadBalancer) {
-			name = ((BaseLoadBalancer) lb).getName();
-		}
-		initialize(lb);
-	}
-
-	void initialize(ILoadBalancer lb) {
-		if (serverWeightTimer != null) {
-			logger.debug("Stopping NFLoadBalancer-serverWeightTimer-" + name);
-			serverWeightTimer.cancel();
-		}
-		serverWeightTimer = new Timer("NFLoadBalancer-serverWeightTimer-" + name, true);
-		serverWeightTimer.schedule(new DynamicServerWeightTask(), 0, serverWeightTaskTimerInterval);
-
-		buildKetamaNodes();
-
-		Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
-			public void run() {
-				logger.debug("Stopping NFLoadBalancer-serverWeightTimer-" + name);
-				serverWeightTimer.cancel();
-			}
-		}));
-	}
-
-	public void shutdown() {
-		if (serverWeightTimer != null) {
-			logger.debug("Stopping NFLoadBalancer-serverWeightTimer-" + name);
-			serverWeightTimer.cancel();
-		}
-	}
-
-	protected BalancingNode choose(ILoadBalancer lb, Object key) {
-		if (lb == null) {
-			return null;
-		}
-		BalancingNode server = null;
-		while (server == null) {
-			if (Thread.interrupted()) {
-				return null;
-			}
-			List<BalancingNode> allServerList = lb.getAllNodes();
-			int serverCount = allServerList.size();
-			if (serverCount == 0) {
-				return null;
-			} else {
-				if (hashNodes.isEmpty()) {
-					buildKetamaNodes();
-				}
-			}
-
-			String loadbalancerKey = "";
-			if (key instanceof String) {
-				loadbalancerKey = key.toString();
-			} else if (key instanceof byte[]) {
-				try {
-					loadbalancerKey = new String((byte[]) key, "ISO_8859_1");
-				} catch (UnsupportedEncodingException e) {
-				}
-			} else {
-				loadbalancerKey = key.toString();
-			}
-
-			try {
-				server = getPrimary(hashAlg.hash(loadbalancerKey));
-			} catch (Exception ex) {
-				logger.error("获取Node时出现异常，异常内容如下！", ex);
-			}
-
-			if (server == null) {
-				Thread.yield();
-				continue;
-			}
-
-			if (!allServerList.contains(server)) {
-				Thread.yield();
-				server = null;
-				continue;
-			}
-
-			if (server.isAlive() && (!server.isSuspended())) {
-				return (server);
-			} else {
-				key = UUIDGenerator.generate();
-			}
-
-			server = null;
-		}
-		return server;
-	}
-
-	private Integer repetitions = 256;
-	private HashAlgorithm hashAlg = DefaultHashAlgorithm.KETAMA_HASH;
-
-	private ConcurrentSkipListMap<Long, BalancingNode> hashNodes;
-
-	/**
-	 * Setup the KetamaNodeLocator with the list of nodes it should use.
-	 *
-	 * @param nodes
-	 *            a List of MemcachedNodes for this KetamaNodeLocator to use in
-	 *            its continuum
-	 */
-	void buildKetamaNodes() {
-		BalancingNode[] tmpNodes = getNodes().toArray(new BalancingNode[0]);
-		ConcurrentSkipListMap<Long, BalancingNode> nodeMap = new ConcurrentSkipListMap<Long, BalancingNode>();
-		int numReps = 0;
-		for (BalancingNode node : tmpNodes) {
-			if (accumulatedWeights.isEmpty()) {
-				numReps = repetitions;
-			} else {
-				numReps = (int) Math.floor((repetitions * accumulatedWeights.get(node)) / 4) * 4;
-			}
-			if (hashAlg == DefaultHashAlgorithm.KETAMA_HASH) {
-				for (int i = 0; i < numReps / 4; i++) {
-					byte[] digest = DefaultHashAlgorithm.computeMd5(node.getHostPort() + "-" + i);
-					for (int h = 0; h < 4; h++) {
-						Long k = ((long) (digest[3 + h * 4] & 0xFF) << 24) | ((long) (digest[2 + h * 4] & 0xFF) << 16)
-								| ((long) (digest[1 + h * 4] & 0xFF) << 8) | (digest[h * 4] & 0xFF);
-						nodeMap.put(k, (BalancingNode) node);
-					}
-				}
-			} else {
-				for (int i = 0; i < numReps; i++) {
-					nodeMap.put(hashAlg.hash(node.getHostPort() + "-" + i), (BalancingNode) node);
-				}
-			}
-		}
-		hashNodes = nodeMap;
-	}
-
-	BalancingNode getPrimary(long hash) {
-		if (!hashNodes.containsKey(hash)) {
-			// Java 1.6 adds a ceilingKey method, but I'm still stuck in 1.5
-			// in a lot of places, so I'm doing this myself.
-			SortedMap<Long, BalancingNode> tailMap = hashNodes.tailMap(hash);
-			if (tailMap.isEmpty()) {
-				hash = hashNodes.firstKey();
-			} else {
-				hash = tailMap.firstKey();
-			}
-		}
-		return hashNodes.get(hash);
-	}
-
-	class DynamicServerWeightTask extends TimerTask {
+	
+	class DynamicServerWeightRunnable implements Runnable {
 		public void run() {
 			ServerWeight serverWeight = new ServerWeight();
 			try {
@@ -255,34 +98,57 @@ public class WeightedHashRule extends AbstractLoadBalancerRule {
 			}
 
 			if (!serverWeightAssignmentInProgress.compareAndSet(false, true)) {
-				serverWeightAssignmentInProgress.set(false);
 				return;
 			}
 			
 			try {
+				Collection<BalancingNode> nodes = getNodes();
 				AbstractLoadBalancer nlb = (AbstractLoadBalancer) lb;
 				LoadBalancerStats stats = nlb.getLoadBalancerStats();
 				if (stats == null) {
 					return;
 				}
+				
+				int count = 0;
 				double totalResponseTime = 0;
-				for (BalancingNode server : nlb.getAllNodes()) {
+				for (BalancingNode server : nodes) {
 					ServerStats ss = stats.getSingleServerStat(server);
-					totalResponseTime += ss.getResponseTimeAvg() == 0 ? 0.001 : ss.getResponseTimeAvg();
+					if(ss.getResponseTimeAvg() != 0) {
+						totalResponseTime += ss.getResponseTimeAvg();
+						count++;
+					}
 				}
-				Double avgResponseTime = totalResponseTime / nlb.getAllNodes().size();
+				
 				Map<BalancingNode, Double> finalWeights = new ConcurrentSkipListMap<BalancingNode, Double>(new ServerComparator());
-				for (BalancingNode server : nlb.getAllNodes()) {
-					ServerStats ss = stats.getSingleServerStat(server);
-					double weight = avgResponseTime / (ss.getResponseTimeAvg() == 0 ? 0.001 : ss.getResponseTimeAvg());
-					finalWeights.put(server, weight);
+				if (count > 0) {
+					double avgResponseTime = totalResponseTime / count;
+					for (BalancingNode server : nodes) {
+						ServerStats ss = stats.getSingleServerStat(server);
+						double weight = (avgResponseTime
+								/ (ss.getResponseTimeAvg() == 0 ? avgResponseTime : ss.getResponseTimeAvg()));
+						weight = Math.pow(weight, 0.5) ;
+						weight = weight > 1.7 ? 1.7 : weight;
+						weight = weight < 0.4 ? 0.4 : weight;
+						finalWeights.put(server, weight);
+					}
+				} else {
+					/*当所有节点都没有被使用，各节点的默认权重均为1*/
+					for (BalancingNode server : nodes) {
+						finalWeights.put(server, 1.0);
+					}
 				}
+				
 				setWeights(finalWeights);
 			} catch (Exception e) {
 				logger.error("Error calculating server weights", e);
 			} finally {
 				buildKetamaNodes();
 				serverWeightAssignmentInProgress.set(false);
+				if(hashNodes.isEmpty()){
+					updateNodeInProgress.set(false);
+				} else {
+					updateNodeInProgress.set(true);
+				}
 			}
 
 		}
@@ -291,19 +157,15 @@ public class WeightedHashRule extends AbstractLoadBalancerRule {
 	void setWeights(Map<BalancingNode, Double> weights) {
 		this.accumulatedWeights = weights;
 	}
-
-	Collection<BalancingNode> getNodes() {
-		return getLoadBalancer().getAllNodes();
+	
+	@Override
+	Map<BalancingNode, Double> getWeights() {
+		return this.accumulatedWeights;
 	}
-
+	
 	@Override
 	public void initWithNiwsConfig(IClientConfig clientConfig) {
 		serverWeightTaskTimerInterval = clientConfig.get(WEIGHT_TASK_TIMER_INTERVAL_CONFIG_KEY, DEFAULT_TIMER_INTERVAL);
-	}
-
-	@Override
-	public BalancingNode choose(Object key) {
-		return choose(getLoadBalancer(), key);
 	}
 
 }

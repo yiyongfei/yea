@@ -41,6 +41,7 @@ public class BalancingNode {
     private volatile String id;
     private volatile boolean isAliveFlag;
     private volatile boolean isSuspendedFlag;
+    private volatile boolean isDownFlag;
     private String zone = UNKNOWN_ZONE;
     private volatile boolean readyToServe = true;
 
@@ -91,6 +92,14 @@ public class BalancingNode {
 
     public boolean isAlive() {
         return isAliveFlag;
+    }
+    
+    public void setDown(boolean isDownFlag) {
+        this.isDownFlag = isDownFlag;
+    }
+
+    public boolean isDown() {
+        return isDownFlag;
     }
     
     public void setSuspended(boolean isSuspendedFlag) {

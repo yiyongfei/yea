@@ -1,6 +1,6 @@
 package com.yea.loadbalancer;
 
-import java.util.List;
+import java.util.Collection;
 
 import com.yea.core.loadbalancer.BalancingNode;
 import com.yea.core.loadbalancer.ILoadBalancer;
@@ -61,7 +61,7 @@ public class LoadBalancerBuilder<T extends BalancingNode> {
         return this;
     }
 
-    public BaseLoadBalancer buildFixedServerListLoadBalancer(List<T> servers) {
+    public BaseLoadBalancer buildFixedServerListLoadBalancer(Collection<T> servers) {
         if (rule == null) {
             rule = createRuleFromConfig(config);
         }

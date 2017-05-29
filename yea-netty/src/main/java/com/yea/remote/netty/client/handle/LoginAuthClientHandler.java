@@ -15,8 +15,6 @@
  */
 package com.yea.remote.netty.client.handle;
 
-import java.util.HashMap;
-
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 
@@ -86,9 +84,8 @@ public class LoginAuthClientHandler extends ChannelInboundHandlerAdapter impleme
         Header header = new Header();
         header.setType(RemoteConstants.MessageType.LOGIN_REQ.value());
         header.setSessionID(UUIDGenerator.generate());
-        header.setAttachment(new HashMap<String, Object>());
-        header.getAttachment().put(NettyConstants.LoginAuth.USERNAME.value(), "admin1");
-        header.getAttachment().put(NettyConstants.LoginAuth.PASSWORD.value(), "password");
+        header.addAttachment(NettyConstants.LoginAuth.USERNAME.value(), "admin1");
+        header.addAttachment(NettyConstants.LoginAuth.PASSWORD.value(), "password");
         message.setHeader(header);
         return message;
     }

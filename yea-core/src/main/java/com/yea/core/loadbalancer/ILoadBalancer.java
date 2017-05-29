@@ -28,6 +28,8 @@ public interface ILoadBalancer {
 	
 	public Collection<BalancingNode> chooseNode(SocketAddress address) ;
 	
+	public Collection<BalancingNode> chooseNode(SocketAddress address, boolean availableOnly) ;
+	
     public boolean contains(SocketAddress address) ;
     
 	/**
@@ -37,7 +39,16 @@ public interface ILoadBalancer {
 	 * 
 	 * @param server Server to mark as down
 	 */
-	public void markNodeDown(BalancingNode node);
+    public void markNodeDown(BalancingNode node);
+    
+    /**
+     * 修改了markNodeDown方法内容，只做标记
+     * 增加confirmNodeDown方法，节点真实下线
+     * @param node
+     */
+	public void confirmNodeDown(BalancingNode node);
+	
+	
 	
 	/**
 	 * @deprecated 2016-01-20 This method is deprecated in favor of the

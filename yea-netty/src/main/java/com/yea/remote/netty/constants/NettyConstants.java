@@ -27,7 +27,7 @@ public class NettyConstants {
     
     public enum MessageHeaderAttachment {
     	CALL_ACT("1"), CALL_REFLECT("2"), CALLBACK_ACT("3"),
-    	HEADER_DATE("11"), RECIEVE_DATE("12"), REQUEST_DATE("13"), REQUEST_RECIEVE_DATE("14");
+    	HEADER_DATE("11"), SEND_DATE("12"), RECIEVE_DATE("13"), REQUEST_DATE("14"), REQUEST_SEND_DATE("15"), REQUEST_RECIEVE_DATE("16");
         
         private String value;
         private MessageHeaderAttachment(String value) {

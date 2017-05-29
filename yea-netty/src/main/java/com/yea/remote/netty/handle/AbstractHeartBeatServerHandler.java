@@ -155,8 +155,7 @@ public abstract class AbstractHeartBeatServerHandler extends IdleStateHandler im
         Header header = new Header();
         header.setType(RemoteConstants.MessageType.HEARTBEAT_REQ.value());
         header.setSessionID(UUIDGenerator.generate());
-        header.setAttachment(new HashMap<String, Object>());
-        header.getAttachment().put(EVT_STATE, state);
+        header.addAttachment(EVT_STATE, state);
         message.setHeader(header);
         return message;
     }
@@ -167,8 +166,7 @@ public abstract class AbstractHeartBeatServerHandler extends IdleStateHandler im
         header.setType(RemoteConstants.MessageType.HEARTBEAT_RESP.value());
         header.setSessionID(sessionID);
         header.setResult(RemoteConstants.MessageResult.SUCCESS.value());
-        header.setAttachment(new HashMap<String, Object>());
-        header.getAttachment().put(EVT_STATE, state);
+        header.addAttachment(EVT_STATE, state);
         message.setHeader(header);
         return message;
     }

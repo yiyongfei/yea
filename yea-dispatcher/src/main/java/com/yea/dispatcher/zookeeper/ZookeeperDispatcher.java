@@ -200,6 +200,9 @@ public class ZookeeperDispatcher implements DispatcherEndpoint {
 					//新增服务提供者节点时，客户端将连接新增的节点
 					nettyClient.connect(socketAddress);
 					break;
+				case NODE_REMOVED:
+					nettyClient.disconnect(socketAddress);
+					break;
 				default:
 					break;
 				}

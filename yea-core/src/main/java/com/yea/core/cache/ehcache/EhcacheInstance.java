@@ -28,8 +28,7 @@ import org.ehcache.config.builders.ResourcePoolsBuilder;
 import org.ehcache.config.units.MemoryUnit;
 import org.ehcache.expiry.Duration;
 import org.ehcache.expiry.Expirations;
-
-import com.yea.core.base.id.MongodbIDGennerator;
+import org.springframework.util.StringUtils;
 
 /**
  * 
@@ -41,8 +40,13 @@ public class EhcacheInstance {
 	public final static String NETTY_CACHE = "nettyCache";
 	private static Map<String, Cache> mapCache = new ConcurrentHashMap<String, Cache>();
 	static {
+		int port = 38080;
+		if(!StringUtils.isEmpty(System.getProperty("server.port"))){
+			port = Integer.valueOf(System.getProperty("server.port"));
+		}
+		
 		PersistentCacheManager persistentCacheManager = CacheManagerBuilder.newCacheManagerBuilder()
-				.with(CacheManagerBuilder.persistence("java.io.tmpdir." + MongodbIDGennerator.get().toHexString())).build(true);
+				.with(CacheManagerBuilder.persistence("NETTY.EHCACHE." + port)).build(true);
 
 		/* Netty缓冲区缓存 */
 		CacheConfigurationBuilder<Serializable, Serializable> nettyConfiguration = CacheConfigurationBuilder

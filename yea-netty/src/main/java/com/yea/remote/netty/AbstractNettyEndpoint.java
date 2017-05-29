@@ -26,16 +26,11 @@ import com.yea.core.remote.AbstractEndpoint;
 import com.yea.core.remote.constants.RemoteConstants;
 import com.yea.core.remote.exception.RemoteException;
 import com.yea.core.remote.struct.CallAct;
-import com.yea.loadbalancer.ClientRegisterServerList;
-import com.yea.loadbalancer.LoadBalancerBuilder;
-import com.yea.loadbalancer.NettyPing;
-import com.yea.loadbalancer.config.CommonClientConfigKey;
-import com.yea.loadbalancer.config.DefaultClientConfigImpl;
-import com.yea.loadbalancer.rule.WeightedHashRule;
 import com.yea.loadbalancer.rx.LoadBalancerCommand;
 import com.yea.loadbalancer.rx.NodeOperation;
 import com.yea.remote.netty.balancing.RemoteClient;
 import com.yea.remote.netty.promise.NettyChannelPromise;
+import com.yea.remote.netty.send.SendHelperRegister;
 
 import io.netty.util.concurrent.GenericFutureListener;
 import rx.Observable;
@@ -50,19 +45,26 @@ public abstract class AbstractNettyEndpoint extends AbstractEndpoint {
 	// 负载均衡（哈希）
 	protected ILoadBalancer loadBalancer = null;
 
+	protected void registerNode(BalancingNode node) {
+		node.setAlive(true);
+		loadBalancer.addNode(node);
+		getBalancingNodes().add(node);
+		SendHelperRegister.registerInstance((RemoteClient) node, null);
+	}
+
+	protected void unregisterNode(BalancingNode node) {
+		loadBalancer.confirmNodeDown(node);
+		SendHelperRegister.unregisterInstance((RemoteClient) node);
+		getBalancingNodes().remove(node);
+	}
+	
 	@Override
 	public void setRegisterName(String registerName) {
 		super.setRegisterName(registerName);
 		initLoadBalancer();
 	}
 
-	protected void initLoadBalancer() {
-		loadBalancer = LoadBalancerBuilder.newBuilder().withRule(new WeightedHashRule()).withPing(new NettyPing())
-				.withClientConfig(DefaultClientConfigImpl.getClientConfigWithDefaultValues()
-						.setClientName(this.getRegisterName()).set(CommonClientConfigKey.NIWSServerListClassName,
-								ClientRegisterServerList.class.getName()))
-				.buildDynamicServerListLoadBalancer();
-	}
+	protected abstract void initLoadBalancer() ;
 	
 	public <T> NettyChannelPromise<T> send(CallAct act, Object... messages) throws Exception {
         return send(act, null, messages);
@@ -79,17 +81,21 @@ public abstract class AbstractNettyEndpoint extends AbstractEndpoint {
 		return promise;
     }
     
+	public BalancingNode choose() {
+		return loadBalancer.chooseNode(MongodbIDGennerator.get().toHexString());
+	}
+    
     public String useStatistics() {
     	return loadBalancer.toString();
     }
 
 	@SuppressWarnings({ "unchecked", "rawtypes", "hiding" })
-	public class ClientOperation<NettyChannelPromise> implements NodeOperation<NettyChannelPromise> {
+	final class ClientOperation<NettyChannelPromise> implements NodeOperation<NettyChannelPromise> {
 		CallAct act;
 		List listeners;
 		Object[] messages;
 
-		public ClientOperation(CallAct act, List listeners, Object[] messages) {
+		ClientOperation(CallAct act, List listeners, Object[] messages) {
 			this.act = act;
 			this.listeners = listeners;
 			this.messages = messages;

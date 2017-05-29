@@ -51,6 +51,7 @@ public class RemoteConstants {
         PROVIDER_LOGOUT((byte) 33),
         PROVIDER_DISCOVER((byte) 34), 
         PROVIDER_DISCOVER_RESULT((byte) 35), 
+        NOTIFT_STOP((byte) 98),
         STOP((byte) 99);
         private byte value;
         private MessageType(byte value) {
@@ -122,4 +123,5 @@ public class RemoteConstants {
             return this.value;
         }
     }
+    
 }

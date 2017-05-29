@@ -20,6 +20,8 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 
+import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.springframework.beans.BeansException;
@@ -50,30 +52,72 @@ public final class NettyMessageEncoder extends MessageToByteEncoder<Message> imp
         }
     	ISerializer serializer = serializePool.borrow();
     	try{
+    		long basedate = new Date().getTime();
     		sendBuf.writeInt((msg.getHeader().getCrcCode()));//长度4字节
             sendBuf.writeInt((msg.getHeader().getLength()));//长度4字节，存放Header+Body的长度，其中Header固定为18字节
             sendBuf.writeBytes((msg.getHeader().getSessionID()));//长度16字节
             sendBuf.writeByte((msg.getHeader().getType()));//长度1字节
             sendBuf.writeByte((msg.getHeader().getPriority()));//长度1字节
             sendBuf.writeByte((msg.getHeader().getResult()));//长度1字节
-            
-            if (msg.getHeader().getAttachment() != null) {
-                sendBuf.writeShort((msg.getHeader().getAttachment().size()));//长度2字节，附属内容的数目
-                byte[] keyArray = null;
+            sendBuf.writeLong(basedate);//长度为8字节，发送时间
+            if (msg.getHeader().getAttachment() != null && !msg.getHeader().getAttachment().isEmpty()) {
+            	sendBuf.writeByte(msg.getHeader().getAttachment().size());
+				Map<String, Number> mapDateType = new HashMap<String, Number>();// 存放Date类型
+				
+				int lengthPos = sendBuf.writerIndex();
+				sendBuf.writeBytes(new byte[1]);//长度1字节，存放非Date类型的参数个数
+				byte[] keyArray = null;
                 byte[] valueArray = null;
-                for (Map.Entry<String, Object> param : msg.getHeader().getAttachment().entrySet()) {
-                    keyArray = param.getKey().getBytes("ISO-8859-1");
-                    sendBuf.writeShort(keyArray.length);
-                    sendBuf.writeBytes(keyArray);
+				for (Map.Entry<String, Object> param : msg.getHeader().getAttachment().entrySet()) {
+					if(param.getValue() instanceof Date) {
+						long time = basedate - ((Date)param.getValue()).getTime();
+						if (time > Integer.MAX_VALUE) {
+							mapDateType.put(param.getKey(), new Long(time));
+						} else if (time > Short.MAX_VALUE) {
+							mapDateType.put(param.getKey(), new Integer((int) time));
+						} else if (time > Byte.MAX_VALUE) {
+							mapDateType.put(param.getKey(), new Short((short) time));
+						} else {
+							mapDateType.put(param.getKey(), new Byte((byte) time));
+						}
+					} else {
+						keyArray = param.getKey().getBytes("ISO-8859-1");
+	                    sendBuf.writeShort(keyArray.length);
+	                    sendBuf.writeBytes(keyArray);
 
-                    valueArray = serializer.serialize(param.getValue());
-                    sendBuf.writeShort(valueArray.length);
-                    sendBuf.writeBytes(valueArray);
+	                    valueArray = serializer.serialize(param.getValue());
+	                    sendBuf.writeShort(valueArray.length);
+	                    sendBuf.writeBytes(valueArray);
+					}
                 }
-                keyArray = null;
-                valueArray = null;
+				sendBuf.setByte(lengthPos, msg.getHeader().getAttachment().size() - mapDateType.size());
+				
+				if(mapDateType.isEmpty()) {
+					sendBuf.writeByte(0);//长度1字节，存放Date类型的参数个数，个数为0
+				} else {
+					sendBuf.writeByte(mapDateType.size());//长度1字节，存放Date类型的参数个数，个数为元素个数
+					for (Map.Entry<String, Number> param : mapDateType.entrySet()) {
+						keyArray = param.getKey().getBytes("ISO-8859-1");
+	                    sendBuf.writeShort(keyArray.length);
+	                    sendBuf.writeBytes(keyArray);
+	                    
+	                    if(param.getValue() instanceof Long) {
+	                    	sendBuf.writeByte(8);
+	                    	sendBuf.writeLong((Long) param.getValue());
+	                    } else if (param.getValue() instanceof Integer) {
+	                    	sendBuf.writeByte(4);
+	                    	sendBuf.writeInt((Integer) param.getValue());
+	                    } else if (param.getValue() instanceof Short) {
+	                    	sendBuf.writeByte(2);
+	                    	sendBuf.writeShort((Short) param.getValue());
+	                    } else {
+	                    	sendBuf.writeByte(1);
+	                    	sendBuf.writeByte((Byte) param.getValue());
+	                    }
+					}
+				}
             } else {
-                sendBuf.writeShort(0);//长度2字节，附属内容的数目为0
+                sendBuf.writeByte(0);//长度2字节，附属内容的数目为0
             }
             
             if (msg.getBody() != null) {
