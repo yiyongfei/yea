@@ -18,6 +18,7 @@ package com.yea.core.serializer;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 
+import com.yea.core.compress.ICompress;
 import com.yea.core.serializer.ISerializer;
 
 
@@ -32,12 +33,21 @@ public abstract class AbstractSerializer implements ISerializer {
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
+	private ICompress compress;
+	
+	public void setCompress(ICompress compress) {
+		this.compress = compress;
+	}
 	
 	public byte[] serialize(Object obj) throws Exception {
 		// TODO Auto-generated method stub
 		ByteArrayOutputStream outStream = _Serialize(obj);
-		try{
-			return outStream.toByteArray();
+		try {
+			if (compress != null) {
+				return compress.compress(outStream.toByteArray());
+			} else {
+				return outStream.toByteArray();
+			}
 		} finally {
 			outStream.close();
 		}
@@ -46,7 +56,13 @@ public abstract class AbstractSerializer implements ISerializer {
 	protected abstract ByteArrayOutputStream _Serialize(Object obj) throws Exception;
 	
 	public Object deserialize(byte[] aryByte) throws Exception {
-	    ByteArrayInputStream inStream = new ByteArrayInputStream(aryByte);
+		ByteArrayInputStream inStream = null;
+		if (compress != null) {
+			inStream = new ByteArrayInputStream(compress.decompress(aryByte));
+		} else {
+			inStream = new ByteArrayInputStream(aryByte);
+		}
+	    
         try {
             return _Deserialize(inStream);
         } finally {

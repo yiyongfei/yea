@@ -40,6 +40,7 @@ public class SerializePool {
 	}
 
 	public void restore(final ISerializer object) {
+		object.setCompress(null);
 		getPool().returnObject(object);
 	}
 

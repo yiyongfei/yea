@@ -99,9 +99,6 @@ public class ServiceClientHandler extends AbstractServiceHandler implements Nett
 								- ((Date) message.getHeader().getAttachment()
 										.get(NettyConstants.MessageHeaderAttachment.REQUEST_RECIEVE_DATE.value()))
 												.getTime(),
-						new Date().getTime() - ((Date) message.getHeader().getAttachment()
-								.get(NettyConstants.MessageHeaderAttachment.HEADER_DATE.value()))
-										.getTime(),
 						new Date().getTime()
 								- ((Date) message.getHeader().getAttachment()
 										.get(NettyConstants.MessageHeaderAttachment.HEADER_DATE.value()))

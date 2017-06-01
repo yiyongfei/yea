@@ -25,6 +25,7 @@ import java.util.Date;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 
+import com.yea.core.compress.Compress;
 import com.yea.core.remote.constants.RemoteConstants;
 import com.yea.core.remote.struct.Header;
 import com.yea.core.remote.struct.Message;
@@ -42,8 +43,8 @@ public class NettyMessageDecoder extends LengthFieldBasedFrameDecoder implements
 	private SerializePool serializePool;
 	
     public NettyMessageDecoder() {
-        super(1024*1024, 4, 4, 0, 0);
-        serializePool = new SerializePool();
+    	super(1024*1024, 4, 4, 0, 0);
+        this.serializePool = new SerializePool();
     }
 
     @Override
@@ -64,11 +65,16 @@ public class NettyMessageDecoder extends LengthFieldBasedFrameDecoder implements
             header.setType(frame.readByte());
             header.setPriority(frame.readByte());
             header.setResult(frame.readByte());
+            RemoteConstants.CompressionAlgorithm compressionAlgorithm = RemoteConstants.CompressionAlgorithm.valueOf(frame.readByte());
+            if(compressionAlgorithm != null && compressionAlgorithm.code() > 0) {
+            	//压缩算法
+            	serializer.setCompress(new Compress().setCompressionAlgorithm(compressionAlgorithm.algorithm()));
+            }
             long basedate = frame.readLong();
             
             int attachmentSize = frame.readByte();
             if (attachmentSize > 0) {
-                attachmentSize = frame.readByte();//非Date类型的附属信息
+                attachmentSize = frame.readByte();//非Date及String类型的附属信息
                 if(attachmentSize > 0) {
                 	byte[] keyArray = null;
                     byte[] valueArray = null;
@@ -98,6 +104,19 @@ public class NettyMessageDecoder extends LengthFieldBasedFrameDecoder implements
                         } else {
                         	header.addAttachment(new String(keyArray, "ISO-8859-1"), new Date(basedate - frame.readLong()));
                         }
+                    }
+                }
+                attachmentSize = frame.readByte();//String类型的附属信息
+                if(attachmentSize > 0) {
+                	byte[] keyArray = null;
+                	byte[] valueArray = null;
+                	for (int i = 0; i < attachmentSize; i++) {
+                        keyArray = new byte[frame.readShort()];
+                        frame.readBytes(keyArray);
+                        valueArray = new byte[frame.readShort()];
+                        frame.readBytes(valueArray);
+                        
+                        header.addAttachment(new String(keyArray, "ISO-8859-1"), new String(valueArray, "ISO-8859-1"));
                     }
                 }
             }
@@ -148,4 +167,5 @@ public class NettyMessageDecoder extends LengthFieldBasedFrameDecoder implements
     public void setApplicationContext(ApplicationContext arg0) throws BeansException {
         context = arg0;
     }
+    
 }

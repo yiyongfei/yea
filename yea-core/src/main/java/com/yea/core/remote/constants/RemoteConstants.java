@@ -15,6 +15,8 @@
  */
 package com.yea.core.remote.constants;
 
+import org.apache.commons.compress.compressors.CompressorStreamFactory;
+
 public class RemoteConstants {
 
 	public enum MessageResult {
@@ -110,6 +112,38 @@ public class RemoteConstants {
             return this.value;
         }
     }
+    
+	public enum CompressionAlgorithm {
+		NONE((byte) 0, ""), GZIP((byte) 1, CompressorStreamFactory.GZIP), BZIP2((byte) 2, CompressorStreamFactory.BZIP2), 
+		XZ((byte) 3, CompressorStreamFactory.XZ), PACK200((byte) 4, CompressorStreamFactory.PACK200), 
+		LZMA((byte) 5, CompressorStreamFactory.LZMA), DEFLATE((byte) 6, CompressorStreamFactory.DEFLATE), 
+		LZ4_BLOCK((byte) 7, CompressorStreamFactory.LZ4_BLOCK), LZ4_FRAMED((byte) 8, CompressorStreamFactory.LZ4_FRAMED),
+		SNAPPY_FRAMED((byte) 9, CompressorStreamFactory.SNAPPY_FRAMED), ZSTD((byte) 10, "zstd"), ;
+		
+		private byte code;
+		private String algorithm;
+
+		private CompressionAlgorithm(byte value, String algorithm) {
+			this.code = value;
+			this.algorithm = algorithm;
+		}
+
+		public byte code() {
+			return this.code;
+		}
+
+		public String algorithm() {
+			return this.algorithm;
+		}
+		
+		public static CompressionAlgorithm valueOf(int ordinal) {
+	        if (ordinal < 0 || ordinal >= values().length) {
+	            return null;
+	        }
+	        return values()[ordinal];
+	    }
+		
+	}
     
 
     public enum ServerHealthType {

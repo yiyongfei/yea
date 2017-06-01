@@ -13,32 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.yea.core.serializer;
+package com.yea.core.compress;
 
-import java.io.Serializable;
+public interface ICompress {
 
-import com.yea.core.compress.ICompress;
-
-public interface ISerializer extends Serializable{
+	byte[] compress(byte[] data) throws Exception;
 	
-	public void setCompress(ICompress compress);
-	
-	/**
-	 * 序列化
-	 * 
-	 * @param obj
-	 * @return
-	 * @throws Exception
-	 */
-	public byte[] serialize(Object obj) throws Exception;
-	
-	/**
-	 * 反序列化
-	 * 
-	 * @param serialString
-	 * @return
-	 * @throws Exception
-	 */
-	public Object deserialize(byte[] aryByte) throws Exception;
-	
+	byte[] decompress(byte[] data) throws Exception;
 }

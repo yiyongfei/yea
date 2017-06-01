@@ -22,6 +22,8 @@
 		<hessian.version>4.0.38</hessian.version>
 		<jackson.version>2.8.7</jackson.version>
 		<commons.pool2.version>2.4.2</commons.pool2.version>
+		<commons.compress.version>1.14</commons.compress.version>
+		<zstd.compress.version>1.2.0</zstd.compress.version>
 		<ehcache.version>3.3.1</ehcache.version>
 		<jedis.version>2.9.0</jedis.version>
 		<freemarker.version>2.3.23</freemarker.version>
@@ -138,6 +140,18 @@
 			    <version>${commons.pool2.version}</version>
 			</dependency>
 			
+			<!-- 压缩 -->
+	        <dependency>
+			    <groupId>org.apache.commons</groupId>
+			    <artifactId>commons-compress</artifactId>
+			    <version>${commons.compress.version}</version>
+			</dependency>
+			<!-- ZSTD压缩算法的支持 -->
+			<dependency>
+			    <groupId>com.github.luben</groupId>
+			    <artifactId>zstd-jni</artifactId>
+			    <version>${zstd.compress.version}</version>
+			</dependency>
 			<!-- 缓存支持 -->
 			<!-- ehcache  -->
 	        <dependency>
